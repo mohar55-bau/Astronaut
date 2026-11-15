@@ -3,1687 +3,739 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AERO-MED | نظام القياس الحيوي المداري - المهمة ORION-IV</title>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <title>AERO-MED | نظام القياس الحيوي المداري — NASA Space Apps</title>
+  <!-- Chart.js للمخططات البيانية اللحظية -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- خطوط ناسا الفضائية والعربية -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Orbitron:wght@600;700;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
-      --bg-base: #0a0d12;
-      --bg-panel: #11161f;
-      --bg-sub: #161c27;
-      --border-line: #232c3d;
-      --text-main: #e2e8f0;
-      --text-muted: #8b9bb4;
-      --accent-cyan: #0ea5e9;
-      --status-nom: #10b981;
-      --status-warn: #f59e0b;
-      --status-crit: #ef4444;
+      --space-black: #05070d;
+      --space-navy: #0a0f1d;
+      --space-card: rgba(13, 20, 36, 0.82);
+      --space-card-hover: rgba(18, 28, 51, 0.92);
+      --nasa-blue: #0b3d91;
+      --nasa-blue-glow: #105bd8;
+      --nasa-red: #fc3d21;
+      --nasa-red-glow: rgba(252, 61, 33, 0.45);
+      --cyan-hud: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.25);
+      --normal: #10b981;
+      --normal-glow: rgba(16, 185, 129, 0.35);
+      --warning: #f59e0b;
+      --warning-glow: rgba(245, 158, 11, 0.35);
+      --critical: #fc3d21;
+      --border-hud: rgba(0, 240, 255, 0.18);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-dim: #94a3b8;
     }
-    * {
-      box-sizing: border-box;
-    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+
     body {
-      background-color: var(--bg-base);
+      background-color: var(--space-black);
       color: var(--text-main);
-      font-family: 'IBM Plex Sans Arabic', sans-serif;
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
+      min-height: 100vh;
+      padding: 20px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      background-image: 
+        radial-gradient(1.5px 1.5px at 20px 30px, #ffffff 100%, transparent),
+        radial-gradient(2px 2px at 280px 80px, #00f0ff 100%, transparent),
+        radial-gradient(1.5px 1.5px at 420px 260px, rgba(255,255,255,0.8) 100%, transparent),
+        radial-gradient(2px 2px at 720px 310px, rgba(252, 61, 33, 0.7) 100%, transparent),
+        radial-gradient(circle at 10% 20%, rgba(11, 61, 145, 0.28) 0%, transparent 45%),
+        radial-gradient(circle at 90% 80%, rgba(252, 61, 33, 0.16) 0%, transparent 45%);
+      background-size: 800px 800px, 800px 800px, 800px 800px, 800px 800px, 100% 100%, 100% 100%;
     }
-    .mono {
-      font-family: 'IBM Plex Mono', monospace;
-      direction: ltr;
-      display: inline-block;
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(rgba(0, 240, 255, 0.018) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(0, 240, 255, 0.018) 1px, transparent 1px);
+      background-size: 45px 45px;
+      pointer-events: none;
+      z-index: 0;
     }
+
+    .container {
+      width: 100%;
+      max-width: 1300px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* شريط NASA Space Apps العلوي */
+    .nasa-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 18px;
+      background: rgba(11, 61, 145, 0.22);
+      border: 1px solid var(--border-hud);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      font-size: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .nasa-tag {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .nasa-meatball {
+      background: var(--nasa-blue);
+      color: #fff;
+      font-family: 'Space Grotesk';
+      font-weight: 900;
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--nasa-red);
+      box-shadow: 0 0 12px rgba(11, 61, 145, 0.8);
+      letter-spacing: 1px;
+    }
+
+    /* رأس لوحة التحكم الفضائية */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--space-card);
+      border: 1px solid var(--border-hud);
+      padding: 18px 24px;
+      border-radius: 18px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
+      flex-wrap: wrap;
+      gap: 14px;
+      position: relative;
+    }
+    header::after {
+      content: "";
+      position: absolute;
+      bottom: 0; left: 24px; right: 24px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan-hud), transparent);
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--nasa-blue), #1e293b);
+      border: 1px solid var(--cyan-hud);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 0 16px var(--cyan-glow);
+    }
+
+    .scenario-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(5, 7, 13, 0.7);
+      padding: 6px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border-hud);
+    }
+    .scenario-picker-wrap label {
+      font-size: 12px;
+      color: var(--cyan-hud);
+      font-weight: 700;
+      font-family: 'Space Grotesk', 'Cairo';
+    }
+    .scenario-select {
+      background: #0d1424;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* شبكة مقاييس نظام دعم الحياة والكابينة ECLSS */
+    .eclss-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+    .eclss-card {
+      background: var(--space-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 14px 16px;
+      backdrop-filter: blur(10px);
+      position: relative;
+      transition: all 0.2s;
+    }
+    .eclss-card:hover { border-color: var(--cyan-hud); transform: translateY(-2px); }
+    .eclss-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); font-weight: 700; }
+    .eclss-val { font-family: 'Orbitron'; font-size: 24px; font-weight: 900; margin: 8px 0 2px 0; color: #fff; }
+    .eclss-unit { font-size: 11px; color: var(--cyan-hud); font-family: 'Space Grotesk'; font-weight: 700; }
+
+    /* بطاقات طاقم الفضاء */
+    .section-title {
+      font-size: 17px;
+      font-weight: 800;
+      margin: 4px 0 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+    }
+    .crew-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 14px;
+    }
+    .crew-card {
+      background: var(--space-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      backdrop-filter: blur(12px);
+      position: relative;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .crew-card:hover, .crew-card.active {
+      border-color: var(--cyan-hud);
+      background: var(--space-card-hover);
+      box-shadow: 0 8px 25px rgba(0, 240, 255, 0.12);
+      transform: translateY(-2px);
+    }
+    .crew-corner {
+      position: absolute;
+      top: 0; right: 0;
+      width: 12px; height: 12px;
+      border-top: 2px solid var(--cyan-hud);
+      border-right: 2px solid var(--cyan-hud);
+    }
+    .crew-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 10px;
+    }
+    .crew-info { display: flex; align-items: center; gap: 10px; }
+    .crew-avatar {
+      font-size: 28px;
+      background: rgba(0,240,255,0.06);
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+      border: 1px solid rgba(0,240,255,0.2);
+    }
+    .crew-name { font-weight: 800; font-size: 16px; color: #fff; }
+    .crew-role { font-size: 12px; color: var(--cyan-hud); font-weight: 600; }
+
+    .crew-vitals {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      text-align: center;
+    }
+    .v-item {
+      background: rgba(5, 7, 13, 0.7);
+      padding: 8px 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 240, 255, 0.08);
+    }
+    .v-label { font-size: 10px; color: var(--text-dim); font-weight: 700; }
+    .v-val { font-family: 'Orbitron'; font-size: 16px; font-weight: 800; margin-top: 3px; }
+
+    /* شارات الحالات */
+    .badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      font-family: 'Space Grotesk';
+      letter-spacing: 0.5px;
+    }
+    .NOMINAL { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid var(--normal); }
+    .WARNING { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid var(--warning); }
+    .CRITICAL { background: rgba(252, 61, 33, 0.25); color: #ff6b52; border: 1px solid var(--nasa-red); animation: alert-glow 1s infinite; }
+    @keyframes alert-glow { 50% { box-shadow: 0 0 18px rgba(252, 61, 33, 0.9); } }
+
+    /* الصف السفلي: المخطط والنظام الخبير */
+    .dashboard-split {
+      display: grid;
+      grid-template-columns: 1.8fr 1.2fr;
+      gap: 14px;
+    }
+    @media (max-width: 900px) {
+      .dashboard-split { grid-template-columns: 1fr; }
+    }
+
     .panel {
-      background-color: var(--bg-panel);
-      border: 1px solid var(--border-line);
+      background: var(--space-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 20px;
+      backdrop-filter: blur(12px);
     }
-    .sub-panel {
-      background-color: var(--bg-sub);
-      border: 1px solid var(--border-line);
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      font-weight: 800;
+      font-size: 15px;
+      color: #fff;
     }
-    .tech-grid-bg {
-      background-image: radial-gradient(#1e293b 1px, transparent 1px);
-      background-size: 16px 16px;
+
+    /* صندوق النظام الخبير (Expert System) */
+    .expert-box {
+      max-height: 280px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
+    .expert-card {
+      background: rgba(5, 7, 13, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.12);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
     }
-    ::-webkit-scrollbar-track {
-      background: #0a0d12;
+    .expert-card.CRITICAL { border-color: var(--nasa-red); background: rgba(252, 61, 33, 0.08); }
+    .expert-card.WARNING { border-color: var(--warning); background: rgba(245, 158, 11, 0.08); }
+    .expert-title { font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+    .expert-desc { color: var(--text-dim); font-size: 12px; line-height: 1.5; }
+    .expert-rec { color: var(--cyan-hud); font-size: 12px; font-weight: 700; background: rgba(0,240,255,0.06); padding: 6px 10px; border-radius: 6px; border-right: 3px solid var(--cyan-hud); }
+
+    /* جدول التنبيهات وسجل المهمة */
+    table { width: 100%; border-collapse: collapse; text-align: right; font-size: 13px; }
+    th, td { padding: 10px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    th { color: var(--cyan-hud); background: rgba(11, 17, 32, 0.8); font-weight: 700; }
+
+    .btn-action {
+      background: linear-gradient(135deg, var(--nasa-blue), #2563eb);
+      border: 1px solid var(--cyan-hud);
+      color: #fff;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    ::-webkit-scrollbar-thumb {
-      background: #263145;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #3b4c6b;
-    }
-    .tab-active {
-      background-color: #161c27;
-      border-bottom: 2px solid #0ea5e9;
-      color: #f8fafc;
-    }
-    .crew-row-active {
-      background-color: #172234 !important;
-      border-right: 3px solid #0ea5e9;
-    }
-    .blink-dot {
-      animation: pulse-opacity 1.4s infinite ease-in-out;
-    }
-    @keyframes pulse-opacity {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.25; }
-    }
+    .btn-action:hover { box-shadow: 0 0 12px var(--cyan-glow); transform: translateY(-1px); }
   </style>
-  <link rel="stylesheet" href="/static/expert_system.css">
 </head>
-<body class="min-h-screen flex flex-col selection:bg-sky-600 selection:text-white">
+<body>
 
-  <!-- TOP TELEMETRY BAR -->
-  <header class="panel border-t-0 border-x-0 px-3 py-2 sticky top-0 z-30">
-    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-3">
-      
-      <!-- Brand & System ID -->
-      <div class="flex items-center gap-3">
-        <div class="flex items-center gap-2 bg-[#161c27] border border-[#283347] px-2.5 py-1">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 blink-dot" id="sys-heartbeat-dot"></span>
-          <span class="mono text-xs font-semibold tracking-wider text-sky-400">SYS.BIOMED.V4.2</span>
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 class="text-sm font-bold tracking-wide text-slate-100">وحدة القياس الحيوي المدارية — ORION-IV</h1>
-            <span class="text-[11px] px-1.5 py-0.5 bg-slate-800 text-slate-300 border border-slate-700 mono">HAB-MOD-02</span>
-          </div>
-          <p class="text-[11px] text-slate-400">مركز المراقبة الطبية الفضائية ووحدة دعم الحياة (ECLSS & Bio-Telemetry)</p>
-        </div>
-      </div>
+<div class="container">
+  <!-- شريط تعريف NASA Space Apps الرسمي -->
+  <div class="nasa-bar">
+    <div class="nasa-tag">
+      <span class="nasa-meatball">NASA</span>
+      <span>INTERNATIONAL SPACE APPS CHALLENGE</span>
+    </div>
+    <div style="font-family:'Space Grotesk', monospace; color:var(--cyan-hud); font-size:11px;">
+      PROJECT: AERO-MED // ORION-IV BIO-TELEMETRY & LIFE SUPPORT
+    </div>
+  </div>
 
-      <!-- Mission Clocks & Comms -->
-      <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
-        <div class="sub-panel px-2.5 py-1 flex items-center gap-2">
-          <span class="text-slate-400">زمن المهمة (MET):</span>
-          <span class="mono font-semibold text-slate-100" id="met-clock">142:08:19:44</span>
-        </div>
-        <div class="sub-panel px-2.5 py-1 flex items-center gap-2">
-          <span class="text-slate-400">التوقيت القياسي (UTC):</span>
-          <span class="mono text-slate-200" id="utc-clock">07:43:21</span>
-        </div>
-        <div class="sub-panel px-2.5 py-1 flex items-center gap-2">
-          <span class="text-slate-400">تأخر الإشارة (OWLT):</span>
-          <span class="mono text-amber-400" id="latency-readout">1.28 s</span>
-        </div>
-        <div class="sub-panel px-2.5 py-1 flex items-center gap-2">
-          <span class="text-slate-400">حزمة KU-Band:</span>
-          <span class="mono text-emerald-400" id="downlink-rate">14.2 Mbps</span>
-        </div>
+  <!-- رأس لوحة التحكم الفضائية -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🛰️</div>
+      <div>
+        <h1 style="font-size:22px; font-weight:900;">AERO-MED // ORION-IV</h1>
+        <p style="font-size:12px; color:var(--text-dim);">نظام مراقبة المؤشرات الحيوية ودعم الحياة في المهمات المدارية العميقة</p>
       </div>
+    </div>
 
-      <!-- Simulation & Emergency Trigger Controls -->
-      <div class="flex items-center gap-1.5">
-        <span class="text-[11px] text-slate-400 ml-1 hidden xl:inline">محاكاة الحالات:</span>
-        <button id="btn-scn-nominal" class="px-2.5 py-1 text-xs font-medium bg-emerald-950/60 hover:bg-emerald-900/70 text-emerald-300 border border-emerald-700/60 transition">
-          الوضع الطبيعي
-        </button>
-        <button id="btn-scn-eva" class="px-2.5 py-1 text-xs font-medium bg-amber-950/50 hover:bg-amber-900/60 text-amber-300 border border-amber-700/50 transition">
-          إجهاد نشاط خارجي (EVA)
-        </button>
-        <button id="btn-scn-co2" class="px-2.5 py-1 text-xs font-medium bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 border border-rose-700/50 transition">
-          ارتفاع CO₂ بالمقصورة
-        </button>
-        <button id="btn-scn-solar" class="px-2.5 py-1 text-xs font-medium bg-purple-950/50 hover:bg-purple-900/60 text-purple-300 border border-purple-700/50 transition">
-          عاصفة إشعاعية (SPE)
-        </button>
-        <button id="btn-pause-stream" class="px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition mr-1">
-          إيقاف مؤقت للبث
-        </button>
-      </div>
+    <!-- محاكي سيناريوهات الفضاء الحية -->
+    <div class="scenario-picker-wrap">
+      <label>محاكاة سيناريو المهمة (SCENARIO):</label>
+      <select id="scenarioSelect" class="scenario-select" onchange="changeScenario(this.value)">
+        <option value="NOMINAL">حالة طبيعية (Nominal Operations)</option>
+        <option value="SOLAR_FLARE">توهج شمسي إشعاعي (Solar Particle Event)</option>
+        <option value="HYPOXIA">نقص أكسجين في المقصورة (Cabin Hypoxia)</option>
+        <option value="CABIN_DECOMPRESSION">تسرب ضغط مفاجئ (Decompression)</option>
+        <option value="EVA_FATIGUE">إجهاد مهمة سير فضائي (EVA Fatigue)</option>
+      </select>
     </div>
   </header>
 
-  <div class="bg-slate-950 border-b border-sky-900/70 px-4 py-1.5 text-center text-[10px] tracking-wide text-sky-200">
-    SIMULATED DEMONSTRATION DATA — NOT REAL ASTRONAUT MEASUREMENTS / NOT FOR MEDICAL USE
-  </div>
-
-  <!-- ACTIVE ALERT BANNER (Hidden when nominal) -->
-  <div id="global-alert-banner" class="hidden bg-rose-950/90 border-b border-rose-600 px-4 py-2 text-xs">
-    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2.5">
-        <span class="px-1.5 py-0.5 bg-rose-600 text-white font-bold mono">ALARM-PRIORITY-1</span>
-        <span id="global-alert-text" class="font-semibold text-rose-100">تحذير: تجاوز الحد المسموح لثاني أكسيد الكربون في القطاع B</span>
+  <!-- نظام دعم الحياة والبيئة (ECLSS Panel) -->
+  <div>
+    <div class="section-title">
+      <span>🛡️ نظام دعم الحياة والبيئة المدارية (ECLSS TELEMETRY)</span>
+      <span style="font-size:12px; color:var(--cyan-hud); font-family:'Space Grotesk';" id="lastSyncTime">LIVE SYNC ACTIVE</span>
+    </div>
+    <div class="eclss-grid">
+      <div class="eclss-card">
+        <div class="eclss-header"><span>ضغط الكابينة</span><span>CABIN PRESSURE</span></div>
+        <div class="eclss-val" id="pressureVal">101.3 <span class="eclss-unit">kPa</span></div>
+        <div style="font-size:10px; color:var(--text-dim);">المعيار: 101.3 kPa (1.0 atm)</div>
       </div>
-      <div class="flex items-center gap-2">
-        <button id="btn-exec-protocol" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-medium transition">
-          تفعيل بروتوكول التصحيح الآلي
-        </button>
-        <button id="btn-ack-alert" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-rose-500/40 transition">
-          تأكيد الاستلام (ACK)
-        </button>
+      <div class="eclss-card">
+        <div class="eclss-header"><span>نسبة الأكسجين</span><span>O2 CONCENTRATION</span></div>
+        <div class="eclss-val" id="o2Val" style="color:#10b981;">20.9 <span class="eclss-unit">%</span></div>
+        <div style="font-size:10px; color:var(--text-dim);">النطاق الآمن: 19.5% - 22.0%</div>
+      </div>
+      <div class="eclss-card">
+        <div class="eclss-header"><span>ثاني أكسيد الكربون</span><span>CO2 CONCENTRATION</span></div>
+        <div class="eclss-val" id="co2Val">3.2 <span class="eclss-unit">mmHg</span></div>
+        <div style="font-size:10px; color:var(--text-dim);">الحد الأقصى المسموح: &lt; 4.0</div>
+      </div>
+      <div class="eclss-card">
+        <div class="eclss-header"><span>مستوى الإشعاع</span><span>RADIATION RATE</span></div>
+        <div class="eclss-val" id="radVal" style="color:var(--cyan-hud);">0.08 <span class="eclss-unit">µSv/h</span></div>
+        <div style="font-size:10px; color:var(--text-dim);">الحد التنبيهي: &gt; 1.5 µSv/h</div>
+      </div>
+      <div class="eclss-card">
+        <div class="eclss-header"><span>حرارة الكابينة</span><span>CABIN TEMP</span></div>
+        <div class="eclss-val" id="cabinTempVal">22.4 <span class="eclss-unit">°C</span></div>
+        <div style="font-size:10px; color:var(--text-dim);">النطاق المثالي: 21°C - 24°C</div>
       </div>
     </div>
   </div>
 
-  <!-- MAIN WORKSPACE -->
-  <main class="flex-1 max-w-[1600px] w-full mx-auto p-3 grid grid-cols-1 lg:grid-cols-12 gap-3">
-
-    <!-- RIGHT COLUMN (IN RTL): CREW ROSTER & CABIN ECLSS (4 cols) -->
-    <section class="lg:col-span-4 flex flex-col gap-3">
-      
-      <!-- Crew Roster Matrix -->
-      <div class="panel flex flex-col">
-        <div class="px-3 py-2 border-b border-[#232c3d] flex items-center justify-between bg-[#141a24]">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-200">قائمة طاقم المهمة (CREW MANIFEST)</span>
-            <span class="mono text-[11px] text-slate-400">[4 ACTIVE]</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <select id="crew-filter-status" class="bg-[#0d1118] text-slate-300 text-[11px] border border-[#283347] px-2 py-0.5 focus:outline-none focus:border-sky-500">
-              <option value="ALL">جميع الحالات (4)</option>
-              <option value="NOMINAL">مستقر (NOMINAL)</option>
-              <option value="ALERT">تحت الملاحظة / تنبيه</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-right text-xs border-collapse">
-            <thead>
-              <tr class="border-b border-[#232c3d] text-slate-400 bg-[#0e131b] text-[11px]">
-                <th class="py-2 px-2.5 font-medium">الرمز / الفرد</th>
-                <th class="py-2 px-2 font-medium">النبض (BPM)</th>
-                <th class="py-2 px-2 font-medium">SpO₂</th>
-                <th class="py-2 px-2 font-medium">الحرارة</th>
-                <th class="py-2 px-2 font-medium">الإشعاع</th>
-                <th class="py-2 px-2.5 font-medium">الحالة</th>
-              </tr>
-            </thead>
-            <tbody id="crew-roster-tbody" class="divide-y divide-[#1d2533]">
-              <!-- Populated by JS -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Cabin Environmental Control (ECLSS) -->
-      <div class="panel flex flex-col">
-        <div class="px-3 py-2 border-b border-[#232c3d] flex items-center justify-between bg-[#141a24]">
-          <span class="text-xs font-bold text-slate-200">بيئة المقصورة ودعم الحياة (ECLSS TELEMETRY)</span>
-          <span id="eclss-mode-badge" class="mono text-[10px] px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-700/50">AUTO-REG</span>
-        </div>
-
-        <div class="p-3 grid grid-cols-2 gap-2.5 text-xs">
-          <!-- Cabin Pressure -->
-          <div class="sub-panel p-2.5">
-            <div class="flex justify-between text-slate-400 text-[11px] mb-1">
-              <span>ضغط المقصورة الكلي</span>
-              <span class="mono">kPa</span>
-            </div>
-            <div class="flex items-baseline justify-between">
-              <span class="mono text-lg font-semibold text-slate-100" id="env-pressure">101.3</span>
-              <span class="text-[11px] text-emerald-400 mono">NOM [99-102]</span>
-            </div>
-            <div class="w-full bg-slate-800 h-1 mt-2">
-              <div id="bar-pressure" class="bg-sky-500 h-1" style="width: 78%"></div>
-            </div>
-          </div>
-
-          <!-- ppO2 -->
-          <div class="sub-panel p-2.5">
-            <div class="flex justify-between text-slate-400 text-[11px] mb-1">
-              <span>الضغط الجزئي للأكسجين ppO₂</span>
-              <span class="mono">kPa</span>
-            </div>
-            <div class="flex items-baseline justify-between">
-              <span class="mono text-lg font-semibold text-slate-100" id="env-o2">21.2</span>
-              <span class="text-[11px] text-emerald-400 mono">NOM [19.5-23.1]</span>
-            </div>
-            <div class="w-full bg-slate-800 h-1 mt-2">
-              <div id="bar-o2" class="bg-emerald-500 h-1" style="width: 65%"></div>
-            </div>
-          </div>
-
-          <!-- ppCO2 -->
-          <div class="sub-panel p-2.5" id="card-co2">
-            <div class="flex justify-between text-slate-400 text-[11px] mb-1">
-              <span>ثاني أكسيد الكربون ppCO₂</span>
-              <span class="mono">mmHg</span>
-            </div>
-            <div class="flex items-baseline justify-between">
-              <span class="mono text-lg font-semibold text-slate-100" id="env-co2">2.4</span>
-              <span class="text-[11px] text-emerald-400 mono" id="env-co2-status">MAX 4.0</span>
-            </div>
-            <div class="w-full bg-slate-800 h-1 mt-2">
-              <div id="bar-co2" class="bg-emerald-500 h-1 transition-all" style="width: 35%"></div>
-            </div>
-          </div>
-
-          <!-- Radiation Flux -->
-          <div class="sub-panel p-2.5" id="card-rad">
-            <div class="flex justify-between text-slate-400 text-[11px] mb-1">
-              <span>معدل الإشعاع المداري</span>
-              <span class="mono">mSv/day</span>
-            </div>
-            <div class="flex items-baseline justify-between">
-              <span class="mono text-lg font-semibold text-slate-100" id="env-rad">0.42</span>
-              <span class="text-[11px] text-emerald-400 mono" id="env-rad-status">SHIELD-OK</span>
-            </div>
-            <div class="w-full bg-slate-800 h-1 mt-2">
-              <div id="bar-rad" class="bg-sky-500 h-1 transition-all" style="width: 24%"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Hardware Actuators Controls -->
-        <div class="px-3 pb-3 pt-1 flex flex-col gap-2">
-          <div class="text-[11px] text-slate-400 border-t border-[#232c3d] pt-2">تحكم يدوي بوحدات التنقية والدعم (ECLSS OVERRIDE):</div>
-          <div class="grid grid-cols-2 gap-2">
-            <button id="btn-toggle-scrubber" class="sub-panel px-2.5 py-1.5 text-xs flex items-center justify-between hover:border-sky-500 transition">
-              <span>مرشح CDRA (CO₂)</span>
-              <span id="scrubber-state-label" class="mono text-[11px] text-emerald-400 font-semibold">STD [40%]</span>
-            </button>
-            <button id="btn-toggle-shield" class="sub-panel px-2.5 py-1.5 text-xs flex items-center justify-between hover:border-sky-500 transition">
-              <span>عزل الماء المغناطيسي</span>
-              <span id="shield-state-label" class="mono text-[11px] text-slate-400 font-semibold">STBY</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Edge Node & Sensor Bus Status -->
-      <div class="panel flex flex-col flex-1">
-        <div class="px-3 py-2 border-b border-[#232c3d] flex items-center justify-between bg-[#141a24]">
-          <span class="text-xs font-bold text-slate-200">حالة عقد الاستشعار (IOT BIO-HARNESS BUS)</span>
-          <span class="mono text-[11px] text-sky-400">MQTT-TLS / 250Hz</span>
-        </div>
-        <div class="p-3 flex flex-col gap-2 text-xs" id="sensor-nodes-container">
-          <!-- Populated dynamically for selected astronaut -->
-        </div>
-      </div>
-
-    </section>
-
-    <!-- LEFT/CENTER COLUMN (IN RTL): DETAILED BIOMETRICS & WAVEFORMS (8 cols) -->
-    <section class="lg:col-span-8 flex flex-col gap-3">
-
-      <!-- Selected Crew Member Header & Action Bar -->
-      <div class="panel p-3 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <div class="w-11 h-11 bg-[#161c27] border border-[#2e3b52] flex flex-col items-center justify-center">
-            <span class="mono text-xs font-bold text-sky-400" id="sel-crew-code">EV-01</span>
-            <span class="mono text-[10px] text-slate-400" id="sel-crew-blood">O+</span>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-base font-bold text-slate-100" id="sel-crew-name">د. طارق المنصور</h2>
-              <span id="sel-crew-status-badge" class="px-2 py-0.5 text-[11px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700/60">
-                مستقر (NOMINAL)
-              </span>
-            </div>
-            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-0.5">
-              <span id="sel-crew-role">قائد المهمة (Mission Commander)</span>
-              <span>•</span>
-              <span>الموقع: <strong class="text-slate-200" id="sel-crew-loc">وحدة القيادة (Deck-A)</strong></span>
-              <span>•</span>
-              <span>النشاط: <strong class="text-sky-300" id="sel-crew-activity">مراقبة مدارية</strong></span>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button id="btn-run-diag" class="px-3 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs font-medium transition">
-            فحص تشخيصي فوري (Edge Run)
-          </button>
-          <button id="btn-open-log-modal" class="px-3 py-1.5 bg-[#161c27] hover:bg-[#1f293a] text-slate-200 border border-[#2e3b52] text-xs font-medium transition">
-            + تسجيل إجراء طبي
-          </button>
-          <button id="btn-export-csv" class="px-3 py-1.5 bg-[#161c27] hover:bg-[#1f293a] text-slate-300 border border-[#2e3b52] text-xs mono transition">
-            CSV ↓
-          </button>
-        </div>
-      </div>
-
-      <!-- 6 Vital Readout Cards -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
-        <!-- HR -->
-        <div class="panel p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>معدل النبض (HR)</span>
-            <span class="mono text-[10px] text-emerald-400">ECG-II</span>
-          </div>
-          <div class="my-1 flex items-baseline justify-between">
-            <span class="mono text-2xl font-bold text-slate-100" id="vital-hr">68</span>
-            <span class="mono text-xs text-slate-400">BPM</span>
-          </div>
-          <div class="text-[10px] text-slate-400 flex justify-between border-t border-[#1e2636] pt-1">
-            <span>النطاق:</span>
-            <span class="mono">52 - 100</span>
-          </div>
-        </div>
-
-        <!-- HRV -->
-        <div class="panel p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>تقلب النبض (HRV)</span>
-            <span class="mono text-[10px] text-sky-400">RMSSD</span>
-          </div>
-          <div class="my-1 flex items-baseline justify-between">
-            <span class="mono text-2xl font-bold text-slate-100" id="vital-hrv">54</span>
-            <span class="mono text-xs text-slate-400">ms</span>
-          </div>
-          <div class="text-[10px] text-slate-400 flex justify-between border-t border-[#1e2636] pt-1">
-            <span>مؤشر الإجهاد:</span>
-            <span id="vital-stress-label" class="text-emerald-400">منخفض</span>
-          </div>
-        </div>
-
-        <!-- SpO2 -->
-        <div class="panel p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>تشبع الأكسجين</span>
-            <span class="mono text-[10px] text-sky-400">PPG</span>
-          </div>
-          <div class="my-1 flex items-baseline justify-between">
-            <span class="mono text-2xl font-bold text-slate-100" id="vital-spo2">98.4</span>
-            <span class="mono text-xs text-slate-400">%</span>
-          </div>
-          <div class="text-[10px] text-slate-400 flex justify-between border-t border-[#1e2636] pt-1">
-            <span>الحد الأدنى:</span>
-            <span class="mono">95.0%</span>
-          </div>
-        </div>
-
-        <!-- BP -->
-        <div class="panel p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>ضغط الدم (NIBP)</span>
-            <span class="mono text-[10px] text-slate-400">PTT</span>
-          </div>
-          <div class="my-1 flex items-baseline justify-between">
-            <span class="mono text-xl font-bold text-slate-100" id="vital-bp">118/76</span>
-            <span class="mono text-[10px] text-slate-400">mmHg</span>
-          </div>
-          <div class="text-[10px] text-slate-400 flex justify-between border-t border-[#1e2636] pt-1">
-            <span>MAP:</span>
-            <span class="mono" id="vital-map">90 mmHg</span>
-          </div>
-        </div>
-
-        <!-- Core Temp -->
-        <div class="panel p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>حرارة الجسم المركزية</span>
-            <span class="mono text-[10px] text-amber-400">IR-CORE</span>
-          </div>
-          <div class="my-1 flex items-baseline justify-between">
-            <span class="mono text-2xl font-bold text-slate-100" id="vital-temp">36.8</span>
-            <span class="mono text-xs text-slate-400">°C</span>
-          </div>
-          <div class="text-[10px] text-slate-400 flex justify-between border-t border-[#1e2636] pt-1">
-            <span>النطاق:</span>
-            <span class="mono">36.1 - 37.5</span>
-          </div>
-        </div>
-
-        <!-- Cumulative Radiation -->
-        <div class="panel p-2.5 flex flex-col justify-between">
-          <div class="flex items-center justify-between text-[11px] text-slate-400">
-            <span>الجرعة الإشعاعية</span>
-            <span class="mono text-[10px] text-purple-400">DOSIMETER</span>
-          </div>
-          <div class="my-1 flex items-baseline justify-between">
-            <span class="mono text-2xl font-bold text-slate-100" id="vital-rad">48.2</span>
-            <span class="mono text-xs text-slate-400">mSv</span>
-          </div>
-          <div class="text-[10px] text-slate-400 flex justify-between border-t border-[#1e2636] pt-1">
-            <span>حد المهمة:</span>
-            <span class="mono">150 mSv</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Real-Time Oscilloscope & Waveforms -->
-      <div class="panel flex flex-col">
-        <div class="px-3 py-2 border-b border-[#232c3d] flex flex-wrap items-center justify-between gap-2 bg-[#141a24]">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-200">راسم الإشارات الحيوية اللحظي (REAL-TIME BIO-OSCILLOSCOPE)</span>
-            <span class="mono text-[10px] px-1.5 py-0.5 bg-slate-800 text-emerald-400 border border-slate-700">LEAD-II + RESP</span>
-          </div>
-          <div class="flex items-center gap-3 text-[11px]">
-            <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-              <input type="checkbox" id="chk-show-resp" checked class="accent-sky-500">
-              <span>موجة التنفس (RESP: <strong class="mono text-sky-400" id="resp-rate-val">15</strong> /min)</span>
-            </label>
-            <select id="ecg-sweep-speed" class="bg-[#0d1118] text-slate-300 text-[11px] border border-[#283347] px-2 py-0.5 mono">
-              <option value="25">25 mm/s</option>
-              <option value="50">50 mm/s</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="relative h-44 w-full tech-grid-bg overflow-hidden">
-          <canvas id="ecg-canvas" class="w-full h-full block"></canvas>
-          <div class="absolute top-2 left-3 flex flex-col items-end pointer-events-none mono text-[10px] text-slate-400">
-            <span>GAIN: 10 mm/mV</span>
-            <span>FILTER: 0.5 - 40 Hz NOTCH</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- TABS: 1) Trend Chart  2) Microgravity & Countermeasures  3) Medical Log & Protocols -->
-      <div class="panel flex-1 flex flex-col">
-        <!-- Tab Bar -->
-        <div class="flex border-b border-[#232c3d] bg-[#141a24] text-xs overflow-x-auto">
-          <button data-tab="tab-trends" class="main-tab-btn tab-active px-4 py-2.5 font-semibold whitespace-nowrap transition">
-            تحليل الاتجاهات الحيوية (24h Trends)
-          </button>
-          <button data-tab="tab-microgravity" class="main-tab-btn px-4 py-2.5 text-slate-400 hover:text-slate-200 font-semibold whitespace-nowrap transition">
-            تأثيرات الجاذبية الصغرى والتمارين (ARED & SANS)
-          </button>
-          <button data-tab="tab-logs" class="main-tab-btn px-4 py-2.5 text-slate-400 hover:text-slate-200 font-semibold whitespace-nowrap transition">
-            السجل الطبي وبروتوكولات الطوارئ (<span id="log-count-badge" class="mono">6</span>)
-          </button>
-          <button data-tab="tab-expert" class="main-tab-btn px-4 py-2.5 text-slate-400 hover:text-slate-200 font-semibold whitespace-nowrap transition">
-            النظام الخبير (EXPERT SYSTEM)
-          </button>
-        </div>
-
-        <!-- TAB 1: TRENDS -->
-        <div id="tab-trends" class="p-3 flex-1 flex flex-col justify-between">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <span class="text-xs text-slate-400">سجل القراءات المجمعة للرائد المحدد مع حدود الإنذار المبكر:</span>
-            <div class="flex items-center gap-1.5">
-              <button data-metric="hr" class="trend-metric-btn px-2.5 py-1 text-xs bg-sky-900/60 text-sky-300 border border-sky-600/60">النبض (HR)</button>
-              <button data-metric="spo2" class="trend-metric-btn px-2.5 py-1 text-xs bg-[#161c27] text-slate-400 border border-[#283347]">الأكسجين (SpO₂)</button>
-              <button data-metric="rad" class="trend-metric-btn px-2.5 py-1 text-xs bg-[#161c27] text-slate-400 border border-[#283347]">تراكم الإشعاع (mSv)</button>
-            </div>
-          </div>
-          <div class="relative h-56 w-full">
-            <canvas id="trends-chart"></canvas>
-          </div>
-        </div>
-
-        <!-- TAB 2: MICROGRAVITY & COUNTERMEASURES -->
-        <div id="tab-microgravity" class="hidden p-3 flex-1 flex flex-col gap-3">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-            <!-- Bone Density & Muscle -->
-            <div class="sub-panel p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-center text-slate-400 mb-1">
-                  <span>تغير كثافة المعادن بالعظام (BMD)</span>
-                  <span class="mono text-[11px] text-amber-400">DXA-EST</span>
-                </div>
-                <div class="mono text-xl font-bold text-slate-100" id="mg-bmd">-1.4%</div>
-                <p class="text-[11px] text-slate-400 mt-1">معدل الفقد الشهري المقدر في عظم الفخذ والعمود الفقري القطني نتيجة انعدام الوزن.</p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-[#232c3d] flex justify-between items-center">
-                <span class="text-slate-400">جرعة فيتامين D3 اليومية:</span>
-                <span class="mono text-emerald-400 font-semibold">2000 IU [تم]</span>
-              </div>
-            </div>
-
-            <!-- SANS / Intraocular Pressure -->
-            <div class="sub-panel p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-center text-slate-400 mb-1">
-                  <span>الضغط داخل العين (SANS / IOP)</span>
-                  <span class="mono text-[11px] text-sky-400">TONOMETRY</span>
-                </div>
-                <div class="mono text-xl font-bold text-slate-100" id="mg-iop">16.2 mmHg</div>
-                <p class="text-[11px] text-slate-400 mt-1">متابعة متلازمة الأعصاب البصرية الفضائية الناتجة عن انتقال السوائل نحو الرأس.</p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-[#232c3d] flex justify-between items-center">
-                <span class="text-slate-400">جلسة الضغط السلبي (LBNP):</span>
-                <button id="btn-schedule-lbnp" class="px-2 py-0.5 bg-sky-900/60 hover:bg-sky-800 text-sky-300 border border-sky-700/60 text-[11px]">جدولة جلسة (45m)</button>
-              </div>
-            </div>
-
-            <!-- ARED & T2 Exercise -->
-            <div class="sub-panel p-3 flex flex-col justify-between">
-              <div>
-                <div class="flex justify-between items-center text-slate-400 mb-1">
-                  <span>بروتوكول التمارين اليومي (ARED / T2)</span>
-                  <span class="mono text-[11px] text-emerald-400" id="mg-ex-pct">85%</span>
-                </div>
-                <div class="mono text-xl font-bold text-slate-100" id="mg-ex-mins">102 / 120 min</div>
-                <p class="text-[11px] text-slate-400 mt-1">تمارين المقاومة الفراغية وجهاز الجري المداري للحفاظ على الكتلة العضلية.</p>
-              </div>
-              <div class="mt-3 pt-2 border-t border-[#232c3d] flex justify-between items-center">
-                <span class="text-slate-400">تحديث إنجاز التمرين:</span>
-                <button id="btn-complete-exercise" class="px-2 py-0.5 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-300 border border-emerald-700/60 text-[11px]">+ تسجيل 18 دقيقة</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="sub-panel p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div>
-              <span class="font-semibold text-slate-200">توازن السوائل وجودة النوم (Circadian & Hydration Index):</span>
-              <span class="text-slate-400 mr-2" id="mg-sleep-summary">متوسط النوم الفعلي: <strong class="mono text-slate-200">6.8 ساعات/يوم</strong> | كفاءة دورة REM: <strong class="mono text-emerald-400">88%</strong></span>
-            </div>
-            <span class="mono text-[11px] text-slate-400">LIGHT-THERAPY: 6500K ACTIVE</span>
-          </div>
-        </div>
-
-        <!-- TAB 3: MEDICAL LOG & PROTOCOLS -->
-        <div id="tab-logs" class="hidden p-3 flex-1 flex flex-col gap-2">
-          <div class="flex items-center justify-between text-xs mb-1">
-            <span class="text-slate-400">سجل الأحداث الطبية والقياسات المحفوظة على الخادم المحلي للمركبة:</span>
-            <button id="btn-clear-ack" class="text-[11px] text-sky-400 hover:underline">تحديث السجل</button>
-          </div>
-          <div class="overflow-y-auto max-h-52 border border-[#232c3d]">
-            <table class="w-full text-right text-xs border-collapse">
-              <thead class="bg-[#0e131b] text-slate-400 text-[11px] sticky top-0">
-                <tr class="border-b border-[#232c3d]">
-                  <th class="py-1.5 px-2.5">الوقت (MET)</th>
-                  <th class="py-1.5 px-2">الرائد / النظام</th>
-                  <th class="py-1.5 px-2">التصنيف</th>
-                  <th class="py-1.5 px-2.5">البيان والإجراء المتخذ</th>
-                </tr>
-              </thead>
-              <tbody id="medical-log-tbody" class="divide-y divide-[#1d2533]">
-                <!-- Populated by JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- TAB 4: EXPLAINABLE RULE-BASED EXPERT SYSTEM -->
-        <div id="tab-expert" class="hidden p-3 flex-1 flex flex-col gap-3">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 class="text-sm font-bold text-slate-100">محرك الاستدلال وقاعدة المعرفة (RULE-BASED INFERENCE ENGINE)</h3>
-              <p class="text-[11px] text-slate-400 mt-1">تحليل حالة المهمة المحفوظة باستخدام قواعد IF–THEN مع تفسير أسباب كل نتيجة.</p>
-            </div>
-            <button id="btn-expert-analyze" type="button" class="px-3 py-2 text-xs font-semibold bg-sky-700 hover:bg-sky-600 text-white border border-sky-500 rounded">
-              تشغيل التحليل الخبير (RUN ANALYSIS)
-            </button>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-            <div class="sub-panel p-3"><div class="text-slate-400">Engine</div><div class="mono text-sky-300 mt-1">IF–THEN Inference</div></div>
-            <div class="sub-panel p-3"><div class="text-slate-400">Knowledge Base</div><div class="mono text-sky-300 mt-1">knowledge_base.json</div></div>
-            <div class="sub-panel p-3"><div class="text-slate-400">Decision Explanation</div><div class="mono text-emerald-300 mt-1">Enabled</div></div>
-          </div>
-          <div id="expert-results" aria-live="polite" class="flex flex-col gap-2 text-xs">
-            <p class="text-slate-400">اضغط على "تشغيل التحليل الخبير" لفحص آخر حالة مهمة محفوظة واستعراض القواعد المطابقة والتوصيات.</p>
-          </div>
-          <p class="text-[10px] leading-relaxed text-amber-300 border-t border-amber-500/20 pt-2">تنبيه: جميع البيانات والحدود والقواعد تجريبية لأغراض التعليم والعرض الهندسي فقط، وليست معايير طبية أو حدود تشغيل معتمدة للمركبات الفضائية.</p>
-        </div>
-
-      </div>
-
-    </section>
-
-  </main>
-
-  <!-- MODAL: ADD MEDICAL LOG / INTERVENTION -->
-  <div id="modal-medical-log" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
-    <div class="panel w-full max-w-md p-4 flex flex-col gap-3">
-      <div class="flex items-center justify-between border-b border-[#232c3d] pb-2">
-        <h3 class="text-sm font-bold text-slate-100">تسجيل ملاحظة أو تدخل طبي في سجل المهمة</h3>
-        <button id="btn-close-modal" class="text-slate-400 hover:text-white text-sm px-1">✕</button>
-      </div>
-      <form id="form-medical-log" class="flex flex-col gap-3 text-xs">
-        <div>
-          <label class="block text-slate-400 mb-1">عضو الطاقم المعني:</label>
-          <select id="log-input-crew" class="w-full bg-[#0d1118] border border-[#283347] px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-sky-500">
-            <option value="EV-01">EV-01 | د. طارق المنصور</option>
-            <option value="EV-02">EV-02 | م. ليلى الزعبي</option>
-            <option value="EV-03">EV-03 | كابتن سامر حداد</option>
-            <option value="EV-04">EV-04 | د. ريم الكيلاني</option>
-            <option value="ECLSS">ECLSS | نظام المقصورة العام</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1">تصنيف الإجراء:</label>
-          <select id="log-input-type" class="w-full bg-[#0d1118] border border-[#283347] px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-sky-500">
-            <option value="فحص روتيني">فحص روتيني (Routine Check)</option>
-            <option value="إعطاء دواء">إعطاء دواء / مكملات (Medication)</option>
-            <option value="بروتوكول طوارئ">بروتوكول طوارئ (Countermeasure)</option>
-            <option value="معايرة حساس">معايرة عقدة استشعار (Sensor Calib)</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-slate-400 mb-1">تفاصيل الإجراء أو التوصية الطبية:</label>
-          <textarea id="log-input-note" rows="3" required placeholder="مثال: إعطاء محلول إلكتروليت 500مل وتخفيض معدل الجهد البدني لمدة ساعتين..." class="w-full bg-[#0d1118] border border-[#283347] p-2 text-slate-200 focus:outline-none focus:border-sky-500"></textarea>
-        </div>
-        <div class="flex justify-end gap-2 pt-1">
-          <button type="button" id="btn-cancel-modal" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300">إلغاء</button>
-          <button type="submit" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-semibold">حفظ في السجل المداري</button>
-        </div>
-      </form>
+  <!-- طاقم الفضاء (Crew Cards) -->
+  <div>
+    <div class="section-title">
+      <span>👨‍🚀 المؤشرات الحيوية لطاقم الفضاء (CREW BIOMETRICS)</span>
+      <span style="font-size:11px; color:var(--text-dim);">اضغط على أي رائد لتتبع رسمه البياني</span>
+    </div>
+    <div class="crew-grid" id="crewContainer">
+      <!-- يتم حقن بطاقات الرواد تلقائياً من الـ API -->
+      <div style="color:var(--text-dim);">جاري تحميل قراءات طاقم الفضاء...</div>
     </div>
   </div>
 
-  <!-- TOAST NOTIFICATION -->
-  <div id="sys-toast" class="hidden fixed bottom-4 left-4 z-50 panel border-sky-500 bg-[#0f1724] px-3.5 py-2 text-xs text-slate-100 shadow-lg flex items-center gap-2">
-    <span class="w-2 h-2 bg-sky-400 rounded-full"></span>
-    <span id="sys-toast-msg">تم تنفيذ الأمر بنجاح</span>
+  <!-- الصف التفاعلي: المخطط البياني + النظام الخبير للذكاء الاصطناعي -->
+  <div class="dashboard-split">
+    <!-- المخطط البياني اللحظي -->
+    <div class="panel">
+      <div class="panel-header">
+        <span id="chartTitle">📈 مخطط التيليمتري اللحظي (Alex Morgan)</span>
+        <span style="font-size:11px; color:var(--cyan-hud); font-family:'Orbitron';">REAL-TIME TELEMETRY</span>
+      </div>
+      <div style="height: 250px;">
+        <canvas id="telemetryChart"></canvas>
+      </div>
+    </div>
+
+    <!-- النظام الخبير للاستنتاج والتوصيات الطبية (Explainable Expert System) -->
+    <div class="panel">
+      <div class="panel-header">
+        <span>🧠 محرك النظام الخبير (EXPERT SYSTEM INFERENCE)</span>
+        <span class="badge NOMINAL" id="expertStatusBadge">NOMINAL</span>
+      </div>
+      <div class="expert-box" id="expertFindings">
+        <div style="color:var(--text-dim); text-align:center; padding:20px;">
+          جاري استنتاج القواعد الطبية وقواعد السلامة...
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script>
-    // =========================================================================
-    // STATE & DATA MODEL
-    // =========================================================================
-    const state = {
-      paused: false,
-      scenario: 'NOMINAL', // NOMINAL | EVA_STRESS | CABIN_CO2 | SOLAR_STORM
-      selectedCrewId: 'EV-01',
-      activeTab: 'tab-trends',
-      activeTrendMetric: 'hr',
-      showRespWave: true,
-      sweepSpeed: 25,
-      metSeconds: 142 * 86400 + 8 * 3600 + 19 * 60 + 44,
-      eclss: {
-        pressure: 101.3,
-        o2: 21.2,
-        co2: 2.4,
-        radFlux: 0.42,
-        scrubberHigh: false,
-        shieldActive: false
-      },
-      crew: [
-        {
-          id: 'EV-01',
-          name: 'د. طارق المنصور',
-          role: 'قائد المهمة (Mission Commander)',
-          blood: 'O+',
-          location: 'وحدة القيادة (Deck-A)',
-          activity: 'مراقبة مدارية',
-          status: 'NOMINAL',
-          hr: 68,
-          hrBase: 68,
-          hrv: 54,
-          spo2: 98.4,
-          sys: 118,
-          dia: 76,
-          temp: 36.8,
-          resp: 14,
-          radDose: 48.2,
-          bmdLoss: -1.2,
-          iop: 15.8,
-          exerciseMins: 105,
-          nodes: [
-            { id: 'ECG-CHEST-01', type: 'حزام الصدر الحيوي (3-Lead ECG)', battery: 94, rssi: -58, status: 'OK' },
-            { id: 'PPG-WRIST-01', type: 'مستشعر الأكسجين والنبض (SpO₂/PPG)', battery: 88, rssi: -62, status: 'OK' },
-            { id: 'DOS-BADGE-01', type: 'مقياس الإشعاع الشخصي (Active Silicon)', battery: 97, rssi: -55, status: 'OK' }
-          ],
-          history: {
-            hr: [66, 67, 65, 68, 71, 74, 70, 68, 67, 69, 68, 68],
-            spo2: [98.5, 98.4, 98.6, 98.3, 98.2, 98.4, 98.5, 98.4, 98.3, 98.5, 98.4, 98.4],
-            rad: [47.8, 47.85, 47.9, 47.94, 47.98, 48.02, 48.05, 48.09, 48.12, 48.15, 48.18, 48.20]
-          }
-        },
-        {
-          id: 'EV-02',
-          name: 'م. ليلى الزعبي',
-          role: 'مهندسة الأنظمة والنشاط الخارجي (EVA-1)',
-          blood: 'A+',
-          location: 'غرفة معادلة الضغط (Airlock-2)',
-          activity: 'فحص بدلة الفضاء (EMU)',
-          status: 'NOMINAL',
-          hr: 76,
-          hrBase: 76,
-          hrv: 46,
-          spo2: 97.9,
-          sys: 122,
-          dia: 79,
-          temp: 37.0,
-          resp: 16,
-          radDose: 52.6,
-          bmdLoss: -1.5,
-          iop: 16.4,
-          exerciseMins: 115,
-          nodes: [
-            { id: 'EMU-BIO-02', type: 'ناقل البدلة الفضائية الحيوي (EMU Telemetry)', battery: 91, rssi: -64, status: 'OK' },
-            { id: 'PPG-EAR-02', type: 'مستشعر الأذن الحراري والأكسجين', battery: 84, rssi: -67, status: 'OK' },
-            { id: 'DOS-EVA-02', type: 'مقياس إشعاع النشاط الخارجي', battery: 95, rssi: -61, status: 'OK' }
-          ],
-          history: {
-            hr: [72, 74, 73, 75, 78, 82, 79, 77, 75, 76, 77, 76],
-            spo2: [98.1, 98.0, 97.9, 98.0, 97.8, 97.6, 97.8, 97.9, 98.0, 97.9, 97.9, 97.9],
-            rad: [52.1, 52.15, 52.2, 52.25, 52.3, 52.35, 52.4, 52.44, 52.48, 52.52, 52.56, 52.60]
-          }
-        },
-        {
-          id: 'EV-03',
-          name: 'كابتن سامر حداد',
-          role: 'طيار المركبة ومهندس الدفع',
-          blood: 'B+',
-          location: 'وحدة التمارين (Hab-Gym)',
-          activity: 'تمرين مقاومة (ARED)',
-          status: 'NOMINAL',
-          hr: 92,
-          hrBase: 92,
-          hrv: 41,
-          spo2: 97.6,
-          sys: 128,
-          dia: 82,
-          temp: 37.2,
-          resp: 19,
-          radDose: 46.9,
-          bmdLoss: -1.1,
-          iop: 16.9,
-          exerciseMins: 95,
-          nodes: [
-            { id: 'ECG-CHEST-03', type: 'حزام الصدر الحيوي (3-Lead ECG)', battery: 79, rssi: -60, status: 'OK' },
-            { id: 'PPG-WRIST-03', type: 'مستشعر الأكسجين والنبض (SpO₂/PPG)', battery: 82, rssi: -63, status: 'OK' },
-            { id: 'DOS-BADGE-03', type: 'مقياس الإشعاع الشخصي (Active Silicon)', battery: 92, rssi: -59, status: 'OK' }
-          ],
-          history: {
-            hr: [68, 70, 72, 75, 84, 96, 98, 95, 93, 91, 92, 92],
-            spo2: [98.2, 98.2, 98.0, 97.9, 97.7, 97.5, 97.4, 97.6, 97.7, 97.6, 97.6, 97.6],
-            rad: [46.5, 46.54, 46.58, 46.62, 46.66, 46.7, 46.74, 46.78, 46.81, 46.84, 46.87, 46.90]
-          }
-        },
-        {
-          id: 'EV-04',
-          name: 'د. ريم الكيلاني',
-          role: 'أخصائية الطب الفضائي والأحياء',
-          blood: 'AB-',
-          location: 'المختبر الحيوي (Bio-Lab)',
-          activity: 'تحليل عينات الدم',
-          status: 'NOMINAL',
-          hr: 64,
-          hrBase: 64,
-          hrv: 59,
-          spo2: 98.8,
-          sys: 114,
-          dia: 74,
-          temp: 36.6,
-          resp: 13,
-          radDose: 44.5,
-          bmdLoss: -1.3,
-          iop: 15.4,
-          exerciseMins: 110,
-          nodes: [
-            { id: 'ECG-CHEST-04', type: 'حزام الصدر الحيوي (3-Lead ECG)', battery: 96, rssi: -52, status: 'OK' },
-            { id: 'PPG-WRIST-04', type: 'مستشعر الأكسجين والنبض (SpO₂/PPG)', battery: 91, rssi: -54, status: 'OK' },
-            { id: 'DOS-BADGE-04', type: 'مقياس الإشعاع الشخصي (Active Silicon)', battery: 98, rssi: -51, status: 'OK' }
-          ],
-          history: {
-            hr: [63, 64, 62, 63, 65, 66, 65, 64, 63, 64, 65, 64],
-            spo2: [98.8, 98.7, 98.9, 98.8, 98.7, 98.8, 98.9, 98.8, 98.8, 98.7, 98.8, 98.8],
-            rad: [44.1, 44.14, 44.18, 44.22, 44.26, 44.3, 44.34, 44.38, 44.41, 44.44, 44.47, 44.50]
-          }
-        }
-      ],
-      logs: [
-        { met: '142:08:10:12', target: 'EV-03', type: 'فحص روتيني', note: 'بدء جلسة تمارين المقاومة على جهاز ARED؛ المؤشرات القلبية ضمن النطاق المتوقع.' },
-        { met: '142:07:45:00', target: 'ECLSS', type: 'معايرة حساس', note: 'معايرة تلقائية لمحلل الغازات الطيفي في وحدة المعيشة HAB-MOD-02.' },
-        { met: '142:06:30:19', target: 'EV-02', type: 'فحص روتيني', note: 'فحص ما قبل النشاط الخارجي (Pre-EVA) للمهندسة ليلى الزعبي؛ تشبع الأكسجين 98%.' },
-        { met: '142:04:15:40', target: 'EV-01', type: 'إعطاء دواء', note: 'تسجيل الجرعة اليومية من فيتامين D3 ومكملات الكالسيوم للحد من فقد الكثافة العظمية.' },
-        { met: '142:02:00:05', target: 'EV-04', type: 'فحص روتيني', note: 'قياس ضغط العين (Tonometry)؛ القراءة 15.4 mmHg دون مؤشرات وذمة بصرية.' },
-        { met: '142:00:12:33', target: 'ECLSS', type: 'فحص روتيني', note: 'استقرار معدل التدفق الإشعاعي المداري عند 0.42 mSv/day.' }
-      ]
-    };
+  <!-- سجل التنبيهات والأحداث الطبية -->
+  <div class="panel">
+    <div class="panel-header">
+      <span>📋 سجل تنبيهات المهمة الحالية (Active Mission Alerts)</span>
+      <button class="btn-action" onclick="acknowledgeAll()">تأكيد جميع التنبيهات (Acknowledge All)</button>
+    </div>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>التوقيت</th>
+            <th>المصدر</th>
+            <th>مستوى الخطورة</th>
+            <th>عنوان التنبيه</th>
+            <th>التفاصيل</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody id="alertsBody">
+          <tr><td colspan="6" style="text-align:center; color:var(--text-dim);">لا توجد تنبيهات حرجة مسجلة</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
+<script>
+  let selectedCrewId = "AST-001";
+  let chart = null;
 
-    // =========================================================================
-    // BACKEND API ADAPTER — same-origin FastAPI server
-    // =========================================================================
-    const API_BASE = '/api';
-    let apiTelemetryInFlight = false;
-    let apiTelemetryCounter = 0;
-    let apiLastErrorAt = 0;
-
-    async function apiRequest(path, options = {}) {
-      const response = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
-      });
-      const contentType = response.headers.get('content-type') || '';
-      const body = contentType.includes('application/json')
-        ? await response.json()
-        : await response.text();
-      if (!response.ok) {
-        const message = body && body.detail ? body.detail : `HTTP ${response.status}`;
-        throw new Error(message);
-      }
-      return body;
-    }
-
-    function apiReportError(error) {
-      const now = Date.now();
-      // Avoid showing a toast every second if the API is temporarily unavailable.
-      if (now - apiLastErrorAt > 15000) {
-        apiLastErrorAt = now;
-        console.warn('[AERO-MED API]', error);
-        const dot = document.getElementById('sys-heartbeat-dot');
-        if (dot) {
-          dot.classList.remove('bg-emerald-500', 'blink-dot');
-          dot.classList.add('bg-amber-400');
-        }
-        if (typeof showToast === 'function') showToast('تعذر الاتصال بالـ Backend؛ الواجهة تعمل محلياً مؤقتاً');
-      }
-    }
-
-    async function apiLoadState() {
-      try {
-        const result = await apiRequest('/state');
-        if (result.state && Array.isArray(result.state.crew)) {
-          Object.assign(state, result.state);
-          return true;
-        }
-        return false;
-      } catch (error) {
-        apiReportError(error);
-        return false;
-      }
-    }
-
-    async function apiSaveState() {
-      try {
-        const snapshot = JSON.parse(JSON.stringify(state));
-        await apiRequest('/state', { method: 'PUT', body: JSON.stringify(snapshot) });
-        return true;
-      } catch (error) {
-        apiReportError(error);
-        return false;
-      }
-    }
-
-    async function apiSendTelemetry() {
-      if (apiTelemetryInFlight) return;
-      apiTelemetryInFlight = true;
-      try {
-        const snapshot = JSON.parse(JSON.stringify(state));
-        await apiRequest('/telemetry', { method: 'POST', body: JSON.stringify(snapshot) });
-      } catch (error) {
-        apiReportError(error);
-      } finally {
-        apiTelemetryInFlight = false;
-      }
-    }
-
-    async function apiAcknowledgeAllAlerts() {
-      try {
-        await apiRequest('/alerts/acknowledge-all', { method: 'POST', body: '{}' });
-      } catch (error) {
-        apiReportError(error);
-      }
-    }
-
-    // =========================================================================
-    // HELPER FUNCTIONS
-    // =========================================================================
-    function formatMET(totalSeconds) {
-      const days = Math.floor(totalSeconds / 86400);
-      const hrs = Math.floor((totalSeconds % 86400) / 3600);
-      const mins = Math.floor((totalSeconds % 3600) / 60);
-      const secs = totalSeconds % 60;
-      const pad = (n) => String(n).padStart(2, '0');
-      return `${days}:${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById('sys-toast');
-      const text = document.getElementById('sys-toast-msg');
-      text.textContent = msg;
-      toast.classList.remove('hidden');
-      clearTimeout(window._toastTimer);
-      window._toastTimer = setTimeout(() => {
-        toast.classList.add('hidden');
-      }, 3200);
-    }
-
-    function addLogEntry(target, type, note) {
-      const met = formatMET(state.metSeconds);
-      state.logs.unshift({ met, target, type, note });
-      renderMedicalLogs();
-      void apiSaveState();
-    }
-
-    function getSelectedCrew() {
-      return state.crew.find(c => c.id === state.selectedCrewId) || state.crew[0];
-    }
-
-    // =========================================================================
-    // UI RENDERERS
-    // =========================================================================
-    function renderCrewRoster() {
-      const tbody = document.getElementById('crew-roster-tbody');
-      const filterVal = document.getElementById('crew-filter-status').value;
-      tbody.innerHTML = '';
-
-      const filtered = state.crew.filter(c => {
-        if (filterVal === 'ALL') return true;
-        if (filterVal === 'NOMINAL') return c.status === 'NOMINAL';
-        return c.status !== 'NOMINAL';
-      });
-
-      filtered.forEach(c => {
-        const tr = document.createElement('tr');
-        const isSelected = c.id === state.selectedCrewId;
-        tr.className = `cursor-pointer hover:bg-[#151d2a] transition ${isSelected ? 'crew-row-active' : ''}`;
-        
-        let badgeHtml = `<span class="px-1.5 py-0.5 text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-700/50 mono">NOMINAL</span>`;
-        if (c.status === 'WARNING') {
-          badgeHtml = `<span class="px-1.5 py-0.5 text-[10px] bg-amber-950 text-amber-300 border border-amber-600/60 mono">CAUTION</span>`;
-        } else if (c.status === 'CRITICAL') {
-          badgeHtml = `<span class="px-1.5 py-0.5 text-[10px] bg-rose-950 text-rose-300 border border-rose-600 font-bold mono blink-dot">CRITICAL</span>`;
-        }
-
-        const hrColor = c.hr > 125 ? 'text-rose-400 font-bold' : (c.hr > 100 ? 'text-amber-300' : 'text-slate-100');
-        const spo2Color = c.spo2 < 94 ? 'text-rose-400 font-bold' : (c.spo2 < 96 ? 'text-amber-300' : 'text-slate-100');
-
-        tr.innerHTML = `
-          <td class="py-2 px-2.5">
-            <div class="font-semibold text-slate-100">${c.name}</div>
-            <div class="text-[10px] text-slate-400 mono">${c.id} • ${c.location}</div>
-          </td>
-          <td class="py-2 px-2 mono ${hrColor}">${Math.round(c.hr)}</td>
-          <td class="py-2 px-2 mono ${spo2Color}">${c.spo2.toFixed(1)}%</td>
-          <td class="py-2 px-2 mono text-slate-200">${c.temp.toFixed(1)}°</td>
-          <td class="py-2 px-2 mono text-slate-300">${c.radDose.toFixed(1)}</td>
-          <td class="py-2 px-2.5">${badgeHtml}</td>
-        `;
-
-        tr.addEventListener('click', () => {
-          state.selectedCrewId = c.id;
-          renderCrewRoster();
-          renderSelectedCrewDetails();
-          updateTrendsChart();
-        });
-
-        tbody.appendChild(tr);
-      });
-    }
-
-    function renderSelectedCrewDetails() {
-      const c = getSelectedCrew();
-      document.getElementById('sel-crew-code').textContent = c.id;
-      document.getElementById('sel-crew-blood').textContent = c.blood;
-      document.getElementById('sel-crew-name').textContent = c.name;
-      document.getElementById('sel-crew-role').textContent = c.role;
-      document.getElementById('sel-crew-loc').textContent = c.location;
-      document.getElementById('sel-crew-activity').textContent = c.activity;
-
-      const statusBadge = document.getElementById('sel-crew-status-badge');
-      if (c.status === 'NOMINAL') {
-        statusBadge.className = 'px-2 py-0.5 text-[11px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-700/60';
-        statusBadge.textContent = 'مستقر (NOMINAL)';
-      } else if (c.status === 'WARNING') {
-        statusBadge.className = 'px-2 py-0.5 text-[11px] font-semibold bg-amber-950 text-amber-300 border border-amber-600/60';
-        statusBadge.textContent = 'تحت الملاحظة (CAUTION)';
-      } else {
-        statusBadge.className = 'px-2 py-0.5 text-[11px] font-semibold bg-rose-950 text-rose-200 border border-rose-500 blink-dot';
-        statusBadge.textContent = 'إنذار طبي حرج (CRITICAL)';
-      }
-
-      // Vitals
-      const hrEl = document.getElementById('vital-hr');
-      hrEl.textContent = Math.round(c.hr);
-      hrEl.className = `mono text-2xl font-bold ${c.hr > 125 ? 'text-rose-400' : (c.hr > 100 ? 'text-amber-300' : 'text-slate-100')}`;
-
-      document.getElementById('vital-hrv').textContent = Math.round(c.hrv);
-      const stressEl = document.getElementById('vital-stress-label');
-      if (c.hrv < 28) {
-        stressEl.textContent = 'مرتفع جداً';
-        stressEl.className = 'text-rose-400 font-semibold';
-      } else if (c.hrv < 40) {
-        stressEl.textContent = 'متوسط';
-        stressEl.className = 'text-amber-400';
-      } else {
-        stressEl.textContent = 'منخفض';
-        stressEl.className = 'text-emerald-400';
-      }
-
-      const spo2El = document.getElementById('vital-spo2');
-      spo2El.textContent = c.spo2.toFixed(1);
-      spo2El.className = `mono text-2xl font-bold ${c.spo2 < 94 ? 'text-rose-400' : (c.spo2 < 96 ? 'text-amber-300' : 'text-slate-100')}`;
-
-      document.getElementById('vital-bp').textContent = `${Math.round(c.sys)}/${Math.round(c.dia)}`;
-      const mapVal = Math.round(c.dia + (c.sys - c.dia) / 3);
-      document.getElementById('vital-map').textContent = `${mapVal} mmHg`;
-
-      document.getElementById('vital-temp').textContent = c.temp.toFixed(1);
-      document.getElementById('vital-rad').textContent = c.radDose.toFixed(2);
-      document.getElementById('resp-rate-val').textContent = Math.round(c.resp);
-
-      // Microgravity Tab Readouts
-      document.getElementById('mg-bmd').textContent = `${c.bmdLoss.toFixed(1)}%`;
-      document.getElementById('mg-iop').textContent = `${c.iop.toFixed(1)} mmHg`;
-      const exPct = Math.min(100, Math.round((c.exerciseMins / 120) * 100));
-      document.getElementById('mg-ex-pct').textContent = `${exPct}%`;
-      document.getElementById('mg-ex-mins').textContent = `${c.exerciseMins} / 120 min`;
-
-      // Sensor Nodes
-      const nodesContainer = document.getElementById('sensor-nodes-container');
-      nodesContainer.innerHTML = '';
-      c.nodes.forEach(n => {
-        const div = document.createElement('div');
-        div.className = 'sub-panel p-2 flex items-center justify-between';
-        div.innerHTML = `
-          <div>
-            <div class="font-medium text-slate-200">${n.type}</div>
-            <div class="mono text-[10px] text-slate-400">${n.id} • RSSI: ${n.rssi} dBm</div>
-          </div>
-          <div class="text-left">
-            <div class="mono text-xs text-emerald-400">${n.battery}% BAT</div>
-            <div class="mono text-[10px] text-slate-400">SYNC-OK</div>
-          </div>
-        `;
-        nodesContainer.appendChild(div);
-      });
-    }
-
-    function renderECLSS() {
-      const e = state.eclss;
-      document.getElementById('env-pressure').textContent = e.pressure.toFixed(1);
-      document.getElementById('env-o2').textContent = e.o2.toFixed(1);
-      document.getElementById('env-co2').textContent = e.co2.toFixed(2);
-      document.getElementById('env-rad').textContent = e.radFlux.toFixed(2);
-
-      // Bars
-      const co2Pct = Math.min(100, (e.co2 / 8.0) * 100);
-      const barCo2 = document.getElementById('bar-co2');
-      const statusCo2 = document.getElementById('env-co2-status');
-      barCo2.style.width = `${co2Pct}%`;
-
-      if (e.co2 > 4.5) {
-        barCo2.className = 'bg-rose-500 h-1 transition-all';
-        statusCo2.textContent = 'HIGH ALARM!';
-        statusCo2.className = 'text-[11px] text-rose-400 font-bold mono';
-      } else if (e.co2 > 3.2) {
-        barCo2.className = 'bg-amber-400 h-1 transition-all';
-        statusCo2.textContent = 'ELEVATED';
-        statusCo2.className = 'text-[11px] text-amber-300 mono';
-      } else {
-        barCo2.className = 'bg-emerald-500 h-1 transition-all';
-        statusCo2.textContent = 'MAX 4.0';
-        statusCo2.className = 'text-[11px] text-emerald-400 mono';
-      }
-
-      const radPct = Math.min(100, (e.radFlux / 5.0) * 100);
-      const barRad = document.getElementById('bar-rad');
-      const statusRad = document.getElementById('env-rad-status');
-      barRad.style.width = `${radPct}%`;
-
-      if (e.radFlux > 1.5) {
-        barRad.className = 'bg-rose-500 h-1 transition-all';
-        statusRad.textContent = 'SPE ALERT!';
-        statusRad.className = 'text-[11px] text-rose-400 font-bold mono';
-      } else {
-        barRad.className = 'bg-sky-500 h-1 transition-all';
-        statusRad.textContent = e.shieldActive ? 'SHIELD-MAX' : 'SHIELD-OK';
-        statusRad.className = 'text-[11px] text-emerald-400 mono';
-      }
-
-      // Actuator buttons
-      const scrubLbl = document.getElementById('scrubber-state-label');
-      if (e.scrubberHigh) {
-        scrubLbl.textContent = 'BOOST [100%]';
-        scrubLbl.className = 'mono text-[11px] text-sky-400 font-bold';
-      } else {
-        scrubLbl.textContent = 'STD [40%]';
-        scrubLbl.className = 'mono text-[11px] text-emerald-400 font-semibold';
-      }
-
-      const shieldLbl = document.getElementById('shield-state-label');
-      if (e.shieldActive) {
-        shieldLbl.textContent = 'ACTIVE';
-        shieldLbl.className = 'mono text-[11px] text-purple-400 font-bold';
-      } else {
-        shieldLbl.textContent = 'STBY';
-        shieldLbl.className = 'mono text-[11px] text-slate-400 font-semibold';
-      }
-    }
-
-    function renderMedicalLogs() {
-      const tbody = document.getElementById('medical-log-tbody');
-      document.getElementById('log-count-badge').textContent = state.logs.length;
-      tbody.innerHTML = '';
-
-      state.logs.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = 'hover:bg-[#141c29]';
-        let typeStyle = 'text-slate-300';
-        if (item.type.includes('طوارئ')) typeStyle = 'text-rose-400 font-semibold';
-        if (item.type.includes('دواء')) typeStyle = 'text-sky-400';
-
-        tr.innerHTML = `
-          <td class="py-1.5 px-2.5 mono text-slate-400 whitespace-nowrap">${item.met}</td>
-          <td class="py-1.5 px-2 mono font-semibold text-slate-200 whitespace-nowrap">${item.target}</td>
-          <td class="py-1.5 px-2 whitespace-nowrap ${typeStyle}">${item.type}</td>
-          <td class="py-1.5 px-2.5 text-slate-300">${item.note}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // =========================================================================
-    // SCENARIO CONTROLLER
-    // =========================================================================
-    function applyScenario(mode) {
-      state.scenario = mode;
-      const banner = document.getElementById('global-alert-banner');
-      const alertText = document.getElementById('global-alert-text');
-
-      // Reset crew baseline first
-      state.crew.forEach(c => {
-        c.status = 'NOMINAL';
-      });
-      state.crew[0].hrBase = 68; state.crew[0].spo2 = 98.4; state.crew[0].hrv = 54; state.crew[0].resp = 14;
-      state.crew[1].hrBase = 76; state.crew[1].spo2 = 97.9; state.crew[1].hrv = 46; state.crew[1].resp = 16;
-      state.crew[2].hrBase = 92; state.crew[2].spo2 = 97.6; state.crew[2].hrv = 41; state.crew[2].resp = 19;
-      state.crew[3].hrBase = 64; state.crew[3].spo2 = 98.8; state.crew[3].hrv = 59; state.crew[3].resp = 13;
-
-      state.eclss.co2 = 2.4;
-      state.eclss.radFlux = 0.42;
-
-      if (mode === 'NOMINAL') {
-        banner.classList.add('hidden');
-        addLogEntry('SYSTEM', 'فحص روتيني', 'استعادة الوضع القياسي (Nominal Operations) لجميع المؤشرات الحيوية وبيئة المقصورة.');
-        showToast('تم تفعيل الوضع القياسي للمهمة');
-      } else if (mode === 'EVA_STRESS') {
-        // EV-02 experiences high exertion and mild hypoxia in suit
-        const evaCrew = state.crew[1];
-        evaCrew.status = 'CRITICAL';
-        evaCrew.hrBase = 144;
-        evaCrew.hr = 144;
-        evaCrew.hrv = 21;
-        evaCrew.spo2 = 92.8;
-        evaCrew.sys = 148;
-        evaCrew.dia = 92;
-        evaCrew.temp = 37.9;
-        evaCrew.resp = 26;
-        evaCrew.activity = 'نشاط خارجي حرج (EVA Thermal Load)';
-        state.selectedCrewId = 'EV-02';
-
-        banner.classList.remove('hidden');
-        alertText.textContent = 'إنذار حيوي [EV-02 م. ليلى الزعبي]: تسرع قلبي (144 BPM) وانخفاض تشبع الأكسجين (92.8%) أثناء النشاط الخارجي.';
-        addLogEntry('EV-02', 'بروتوكول طوارئ', 'رصد إجهاد حراري ونقص أكسجين خفيف في بدلة الفضاء EMU-02؛ يوصى برفع تدفق O₂ وإيقاف النشاط الخارجي.');
-        showToast('محاكاة: إجهاد نشاط خارجي للرائدة EV-02');
-      } else if (mode === 'CABIN_CO2') {
-        state.eclss.co2 = 6.2;
-        state.eclss.scrubberHigh = false;
-        state.crew.forEach(c => {
-          c.status = 'WARNING';
-          c.hrBase += 14;
-          c.resp += 5;
-          c.spo2 = Math.max(94.8, c.spo2 - 1.6);
-        });
-        banner.classList.remove('hidden');
-        alertText.textContent = 'إنذار بيئي [ECLSS]: ارتفاع الضغط الجزئي لثاني أكسيد الكربون (ppCO₂ = 6.2 mmHg) في المقصورة الرئيسية.';
-        addLogEntry('ECLSS', 'بروتوكول طوارئ', 'تجاوز حد ppCO₂ المسموح؛ يلزم تشغيل مرشحات CDRA بطاقة قصوى (BOOST 100%).');
-        showToast('محاكاة: ارتفاع غاز CO₂ في المقصورة');
-      } else if (mode === 'SOLAR_STORM') {
-        state.eclss.radFlux = 3.85;
-        state.eclss.shieldActive = false;
-        state.crew.forEach(c => {
-          c.status = 'CRITICAL';
-          c.hrBase += 10;
-        });
-        banner.classList.remove('hidden');
-        alertText.textContent = 'إنذار إشعاعي [SPE EVENT]: تدفق بروتونات شمسية مرتفع (3.85 mSv/day) — يوصى بتفعيل العزل وانتقال الطاقم للقطاع المحمي.';
-        addLogEntry('ECLSS', 'بروتوكول طوارئ', 'رصد عاصفة إشعاعية شمسية (SPE)؛ توجيه الطاقم إلى المخبأ المحمي وتفعيل العزل المغناطيسي.');
-        showToast('محاكاة: عاصفة إشعاعية شمسية (SPE)');
-      }
-
-      renderCrewRoster();
-      renderSelectedCrewDetails();
-      renderECLSS();
-      updateTrendsChart();
-      void apiSaveState();
-    }
-
-    // =========================================================================
-    // REAL-TIME OSCILLOSCOPE (ECG LEAD-II + RESPIRATION)
-    // =========================================================================
-    const ecgCanvas = document.getElementById('ecg-canvas');
-    const ecgCtx = ecgCanvas.getContext('2d');
-    let ecgPhase = 0;
-    let respPhase = 0;
-    let ecgPoints = [];
-    let respPoints = [];
-
-    function resizeEcgCanvas() {
-      const rect = ecgCanvas.parentElement.getBoundingClientRect();
-      ecgCanvas.width = rect.width;
-      ecgCanvas.height = rect.height;
-      ecgPoints = new Array(Math.floor(rect.width)).fill(rect.height * 0.45);
-      respPoints = new Array(Math.floor(rect.width)).fill(rect.height * 0.8);
-    }
-
-    // Synthetic P-Q-R-S-T waveform generator
-    function sampleECG(phase) {
-      // phase in [0, 1)
-      const p = phase % 1;
-      let y = 0;
-      // P wave
-      y += 0.15 * Math.exp(-Math.pow((p - 0.18) / 0.035, 2));
-      // Q dip
-      y -= 0.18 * Math.exp(-Math.pow((p - 0.28) / 0.012, 2));
-      // R spike
-      y += 1.15 * Math.exp(-Math.pow((p - 0.305) / 0.012, 2));
-      // S dip
-      y -= 0.32 * Math.exp(-Math.pow((p - 0.33) / 0.014, 2));
-      // T wave
-      y += 0.28 * Math.exp(-Math.pow((p - 0.52) / 0.055, 2));
-      // Micro noise
-      y += (Math.random() - 0.5) * 0.03;
-      return y;
-    }
-
-    let writeHeadX = 0;
-
-    function animateOscilloscope() {
-      if (!state.paused && ecgCanvas.width > 0) {
-        const crew = getSelectedCrew();
-        const hr = crew.hr || 70;
-        const resp = crew.resp || 15;
-        const stepsPerFrame = state.sweepSpeed === 50 ? 4 : 2;
-
-        for (let i = 0; i < stepsPerFrame; i++) {
-          ecgPhase += (hr / 60) / (60 * (state.sweepSpeed === 50 ? 2 : 1));
-          respPhase += (resp / 60) / 60;
-
-          const ecgVal = sampleECG(ecgPhase);
-          const midY = ecgCanvas.height * 0.48;
-          const amp = ecgCanvas.height * 0.32;
-          ecgPoints[writeHeadX] = midY - ecgVal * amp;
-
-          const respVal = Math.sin(respPhase * Math.PI * 2);
-          const respMidY = ecgCanvas.height * 0.82;
-          respPoints[writeHeadX] = respMidY - respVal * (ecgCanvas.height * 0.1);
-
-          writeHeadX = (writeHeadX + 1) % ecgPoints.length;
-        }
-
-        // Draw background & clear bar
-        ecgCtx.clearRect(0, 0, ecgCanvas.width, ecgCanvas.height);
-
-        // Draw ECG trace
-        ecgCtx.strokeStyle = crew.status === 'CRITICAL' ? '#f43f5e' : '#10b981';
-        ecgCtx.lineWidth = 1.8;
-        ecgCtx.beginPath();
-        for (let x = 0; x < ecgPoints.length; x++) {
-          // Leave a small blank gap ahead of writeHeadX like a real medical monitor
-          const dist = (x - writeHeadX + ecgPoints.length) % ecgPoints.length;
-          if (dist < 18) {
-            ecgCtx.moveTo(x + 1, ecgPoints[(x + 1) % ecgPoints.length]);
-            continue;
-          }
-          if (x === 0) ecgCtx.moveTo(x, ecgPoints[x]);
-          else ecgCtx.lineTo(x, ecgPoints[x]);
-        }
-        ecgCtx.stroke();
-
-        // Draw Respiration trace if enabled
-        if (state.showRespWave) {
-          ecgCtx.strokeStyle = '#38bdf8';
-          ecgCtx.lineWidth = 1.3;
-          ecgCtx.beginPath();
-          for (let x = 0; x < respPoints.length; x++) {
-            const dist = (x - writeHeadX + respPoints.length) % respPoints.length;
-            if (dist < 18) {
-              ecgCtx.moveTo(x + 1, respPoints[(x + 1) % respPoints.length]);
-              continue;
-            }
-            if (x === 0) ecgCtx.moveTo(x, respPoints[x]);
-            else ecgCtx.lineTo(x, respPoints[x]);
-          }
-          ecgCtx.stroke();
-        }
-
-        // Leading cursor dot
-        const headIdx = (writeHeadX - 1 + ecgPoints.length) % ecgPoints.length;
-        ecgCtx.fillStyle = '#ffffff';
-        ecgCtx.beginPath();
-        ecgCtx.arc(headIdx, ecgPoints[headIdx], 2.5, 0, Math.PI * 2);
-        ecgCtx.fill();
-      }
-      requestAnimationFrame(animateOscilloscope);
-    }
-
-    // =========================================================================
-    // 24-HOUR TRENDS CHART (CHART.JS)
-    // =========================================================================
-    let trendsChartInstance = null;
-
-    function initTrendsChart() {
-      const ctx = document.getElementById('trends-chart').getContext('2d');
-      const labels = ['-11h', '-10h', '-9h', '-8h', '-7h', '-6h', '-5h', '-4h', '-3h', '-2h', '-1h', 'الآن'];
-
-      trendsChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: 'معدل النبض (BPM)',
-            data: getSelectedCrew().history.hr,
-            borderColor: '#0ea5e9',
-            backgroundColor: 'rgba(14, 165, 233, 0.12)',
+  // إعداد الرسم البياني Chart.js
+  function initChart() {
+    const ctx = document.getElementById('telemetryChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['-30s', '-25s', '-20s', '-15s', '-10s', '-5s', 'Now'],
+        datasets: [
+          {
+            label: 'النبض (BPM)',
+            data: [72, 74, 73, 75, 78, 76, 75],
+            borderColor: '#00f0ff',
+            backgroundColor: 'rgba(0, 240, 255, 0.1)',
             borderWidth: 2,
-            pointRadius: 2.5,
+            tension: 0.35,
             fill: true,
-            tension: 0.3
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#94a3b8', font: { family: 'IBM Plex Sans Arabic', size: 11 } }
-            }
+            yAxisID: 'y'
           },
-          scales: {
-            x: {
-              ticks: { color: '#64748b', font: { family: 'IBM Plex Mono', size: 10 } },
-              grid: { color: '#1e293b' }
-            },
-            y: {
-              ticks: { color: '#94a3b8', font: { family: 'IBM Plex Mono', size: 10 } },
-              grid: { color: '#1e293b' }
-            }
+          {
+            label: 'الأكسجين SpO2 (%)',
+            data: [98, 98, 97, 98, 98, 99, 98],
+            borderColor: '#10b981',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            tension: 0.35,
+            yAxisID: 'y1'
           }
-        }
-      });
-    }
-
-    function updateTrendsChart() {
-      if (!trendsChartInstance) return;
-      const crew = getSelectedCrew();
-      const metric = state.activeTrendMetric;
-      const ds = trendsChartInstance.data.datasets[0];
-
-      if (metric === 'hr') {
-        ds.label = `معدل النبض (BPM) — ${crew.name}`;
-        ds.data = [...crew.history.hr];
-        ds.borderColor = '#0ea5e9';
-        ds.backgroundColor = 'rgba(14, 165, 233, 0.12)';
-      } else if (metric === 'spo2') {
-        ds.label = `تشبع الأكسجين (SpO₂ %) — ${crew.name}`;
-        ds.data = [...crew.history.spo2];
-        ds.borderColor = '#10b981';
-        ds.backgroundColor = 'rgba(16, 185, 129, 0.12)';
-      } else if (metric === 'rad') {
-        ds.label = `الجرعة الإشعاعية التراكمية (mSv) — ${crew.name}`;
-        ds.data = [...crew.history.rad];
-        ds.borderColor = '#a855f7';
-        ds.backgroundColor = 'rgba(168, 85, 247, 0.12)';
-      }
-      trendsChartInstance.update();
-    }
-
-    // =========================================================================
-    // PERIODIC TELEMETRY TICK (1 Hz)
-    // =========================================================================
-    function telemetryTick() {
-      if (state.paused) return;
-
-      state.metSeconds += 1;
-      document.getElementById('met-clock').textContent = formatMET(state.metSeconds);
-
-      const now = new Date();
-      document.getElementById('utc-clock').textContent = now.toISOString().slice(11, 19);
-
-      // Slight latency & downlink fluctuation
-      const lat = (1.24 + (Math.random() * 0.08)).toFixed(2);
-      const dl = (13.8 + (Math.random() * 0.9)).toFixed(1);
-      document.getElementById('latency-readout').textContent = `${lat} s`;
-      document.getElementById('downlink-rate').textContent = `${dl} Mbps`;
-
-      // ECLSS dynamics
-      if (state.eclss.scrubberHigh && state.eclss.co2 > 2.1) {
-        state.eclss.co2 = Math.max(2.0, state.eclss.co2 - 0.25);
-        if (state.eclss.co2 <= 2.6 && state.scenario === 'CABIN_CO2') {
-          state.scenario = 'NOMINAL';
-          state.crew.forEach(c => { c.status = 'NOMINAL'; c.hrBase -= 10; });
-          document.getElementById('global-alert-banner').classList.add('hidden');
-          showToast('انخفض مستوى CO₂ إلى النطاق الآمن بفضل مرشح CDRA');
-        }
-      } else {
-        state.eclss.co2 = Math.max(1.8, state.eclss.co2 + (Math.random() - 0.49) * 0.03);
-      }
-
-      if (state.eclss.shieldActive && state.eclss.radFlux > 0.5) {
-        state.eclss.radFlux = Math.max(0.45, state.eclss.radFlux - 0.4);
-      }
-
-      // Update each crew member's live vitals slightly around baseline
-      state.crew.forEach(c => {
-        const deltaHr = (Math.random() - 0.5) * 2.2;
-        c.hr = Math.max(48, Math.min(185, c.hrBase + deltaHr));
-        c.spo2 = Math.max(88, Math.min(100, c.spo2 + (Math.random() - 0.5) * 0.12));
-        c.temp = Math.max(36.0, Math.min(39.2, c.temp + (Math.random() - 0.5) * 0.02));
-        c.radDose += (state.eclss.radFlux / 86400) * 10;
-
-        // Keep last point in history synced
-        c.history.hr[c.history.hr.length - 1] = Math.round(c.hr);
-        c.history.spo2[c.history.spo2.length - 1] = Number(c.spo2.toFixed(1));
-        c.history.rad[c.history.rad.length - 1] = Number(c.radDose.toFixed(2));
-      });
-
-      renderCrewRoster();
-      renderSelectedCrewDetails();
-      renderECLSS();
-      if (state.activeTab === 'tab-trends') {
-        updateTrendsChart();
-      }
-
-      apiTelemetryCounter += 1;
-      if (apiTelemetryCounter >= 5) {
-        apiTelemetryCounter = 0;
-        void apiSendTelemetry();
-      }
-    }
-
-    // =========================================================================
-    // EVENT LISTENERS & CONTROLS
-    // =========================================================================
-    window.addEventListener('DOMContentLoaded', async () => {
-      const restoredFromBackend = await apiLoadState();
-      renderCrewRoster();
-      renderSelectedCrewDetails();
-      renderECLSS();
-      renderMedicalLogs();
-      resizeEcgCanvas();
-      initTrendsChart();
-      requestAnimationFrame(animateOscilloscope);
-      setInterval(telemetryTick, 1000);
-      if (!restoredFromBackend) {
-        await apiSaveState(); // First run: save the page's initial simulated demo state.
-      }
-
-      window.addEventListener('resize', resizeEcgCanvas);
-
-      // Filter crew status
-      document.getElementById('crew-filter-status').addEventListener('change', renderCrewRoster);
-
-      // Scenario buttons
-      document.getElementById('btn-scn-nominal').addEventListener('click', () => applyScenario('NOMINAL'));
-      document.getElementById('btn-scn-eva').addEventListener('click', () => applyScenario('EVA_STRESS'));
-      document.getElementById('btn-scn-co2').addEventListener('click', () => applyScenario('CABIN_CO2'));
-      document.getElementById('btn-scn-solar').addEventListener('click', () => applyScenario('SOLAR_STORM'));
-
-      // Pause / Resume stream
-      const pauseBtn = document.getElementById('btn-pause-stream');
-      pauseBtn.addEventListener('click', () => {
-        state.paused = !state.paused;
-        const dot = document.getElementById('sys-heartbeat-dot');
-        if (state.paused) {
-          pauseBtn.textContent = 'استئناف البث الحي';
-          pauseBtn.className = 'px-2.5 py-1 text-xs font-medium bg-sky-700 text-white border border-sky-500 transition mr-1';
-          dot.classList.remove('bg-emerald-500', 'blink-dot');
-          dot.classList.add('bg-amber-400');
-          showToast('تم إيقاف البث اللحظي مؤقتاً لتدقيق القراءات');
-        } else {
-          pauseBtn.textContent = 'إيقاف مؤقت للبث';
-          pauseBtn.className = 'px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition mr-1';
-          dot.classList.remove('bg-amber-400');
-          dot.classList.add('bg-emerald-500', 'blink-dot');
-          showToast('تم استئناف استقبال القياسات الحيوية');
-        }
-        void apiSaveState();
-      });
-
-      // Global Alert Banner Actions
-      document.getElementById('btn-ack-alert').addEventListener('click', () => {
-        document.getElementById('global-alert-banner').classList.add('hidden');
-        addLogEntry('OPERATOR', 'بروتوكول طوارئ', 'تأكيد استلام الإنذار (ACK) من قِبل ضابط المراقبة الطبية.');
-        void apiAcknowledgeAllAlerts();
-        showToast('تم تأكيد استلام الإنذار (ACK)');
-      });
-
-      document.getElementById('btn-exec-protocol').addEventListener('click', () => {
-        if (state.scenario === 'CABIN_CO2') {
-          state.eclss.scrubberHigh = true;
-          addLogEntry('ECLSS', 'بروتوكول طوارئ', 'تفعيل مرشحات CDRA بطاقة 100% آلياً لخفض ثاني أكسيد الكربون.');
-        } else if (state.scenario === 'SOLAR_STORM') {
-          state.eclss.shieldActive = true;
-          state.crew.forEach(c => { c.location = 'المخبأ المحمي (Core-Shelter)'; c.status = 'NOMINAL'; c.hrBase = 72; });
-          addLogEntry('ECLSS', 'بروتوكول طوارئ', 'تفعيل الدرع المغناطيسي المائي وإخلاء الطاقم إلى القطاع المحمي.');
-        } else if (state.scenario === 'EVA_STRESS') {
-          const eva = state.crew[1];
-          eva.status = 'NOMINAL';
-          eva.hrBase = 84;
-          eva.hr = 84;
-          eva.spo2 = 98.1;
-          eva.hrv = 45;
-          eva.temp = 37.1;
-          eva.activity = 'العودة لغرفة معادلة الضغط (EVA Abort-Safe)';
-          addLogEntry('EV-02', 'بروتوكول طوارئ', 'رفع تدفق الأكسجين في البدلة إلى 100% وتبريد دورة المياه؛ استقرت المؤشرات.');
-        }
-        document.getElementById('global-alert-banner').classList.add('hidden');
-        renderCrewRoster();
-        renderSelectedCrewDetails();
-        renderECLSS();
-        showToast('تم تنفيذ بروتوكول التصحيح الآلي بنجاح');
-      });
-
-      // ECLSS Hardware Override Buttons
-      document.getElementById('btn-toggle-scrubber').addEventListener('click', () => {
-        state.eclss.scrubberHigh = !state.eclss.scrubberHigh;
-        renderECLSS();
-        addLogEntry('ECLSS', 'معايرة حساس', `تغيير نمط مرشح ثاني أكسيد الكربون CDRA إلى: ${state.eclss.scrubberHigh ? 'BOOST 100%' : 'STD 40%'}`);
-        showToast(`مرشح CDRA: ${state.eclss.scrubberHigh ? 'طاقة قصوى (BOOST)' : 'الوضع القياسي'}`);
-      });
-
-      document.getElementById('btn-toggle-shield').addEventListener('click', () => {
-        state.eclss.shieldActive = !state.eclss.shieldActive;
-        renderECLSS();
-        addLogEntry('ECLSS', 'بروتوكول طوارئ', `تغيير حالة العزل الإشعاعي إلى: ${state.eclss.shieldActive ? 'مُفعّل (ACTIVE)' : 'استعداد (STBY)'}`);
-        showToast(`العزل الإشعاعي: ${state.eclss.shieldActive ? 'مُفعّل' : 'وضع الاستعداد'}`);
-      });
-
-      // Oscilloscope controls
-      document.getElementById('chk-show-resp').addEventListener('change', (e) => {
-        state.showRespWave = e.target.checked;
-      });
-      document.getElementById('ecg-sweep-speed').addEventListener('change', (e) => {
-        state.sweepSpeed = Number(e.target.value);
-      });
-
-      // Tabs switching
-      document.querySelectorAll('.main-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const targetTab = btn.getAttribute('data-tab');
-          state.activeTab = targetTab;
-
-          document.querySelectorAll('.main-tab-btn').forEach(b => {
-            b.classList.remove('tab-active');
-            b.classList.add('text-slate-400');
-          });
-          btn.classList.add('tab-active');
-          btn.classList.remove('text-slate-400');
-
-          ['tab-trends', 'tab-microgravity', 'tab-logs', 'tab-expert'].forEach(id => {
-            document.getElementById(id).classList.toggle('hidden', id !== targetTab);
-          });
-
-          if (targetTab === 'tab-trends') {
-            updateTrendsChart();
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+          y: {
+            type: 'linear',
+            position: 'left',
+            min: 40, max: 150,
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#00f0ff', font: { family: 'Orbitron' } }
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            min: 80, max: 100,
+            grid: { drawOnChartArea: false },
+            ticks: { color: '#10b981', font: { family: 'Orbitron' } }
           }
-        });
-      });
-
-      // Trend Metric Switcher
-      document.querySelectorAll('.trend-metric-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          state.activeTrendMetric = btn.getAttribute('data-metric');
-          document.querySelectorAll('.trend-metric-btn').forEach(b => {
-            b.className = 'trend-metric-btn px-2.5 py-1 text-xs bg-[#161c27] text-slate-400 border border-[#283347]';
-          });
-          btn.className = 'trend-metric-btn px-2.5 py-1 text-xs bg-sky-900/60 text-sky-300 border border-sky-600/60';
-          updateTrendsChart();
-        });
-      });
-
-      // Microgravity Tab Interactive Buttons
-      document.getElementById('btn-schedule-lbnp').addEventListener('click', () => {
-        const c = getSelectedCrew();
-        c.iop = Math.max(14.0, c.iop - 0.6);
-        renderSelectedCrewDetails();
-        addLogEntry(c.id, 'فحص روتيني', `جدولة وتنفيذ جلسة ضغط سلبي للجزء السفلي (LBNP)؛ انخفض ضغط العين إلى ${c.iop.toFixed(1)} mmHg.`);
-        showToast(`تم تسجيل جلسة LBNP للرائد ${c.name}`);
-      });
-
-      document.getElementById('btn-complete-exercise').addEventListener('click', () => {
-        const c = getSelectedCrew();
-        c.exerciseMins = Math.min(120, c.exerciseMins + 18);
-        renderSelectedCrewDetails();
-        addLogEntry(c.id, 'فحص روتيني', `إتمام 18 دقيقة إضافية على جهاز المقاومة ARED (الإجمالي اليومي: ${c.exerciseMins} دقيقة).`);
-        showToast(`تم تحديث سجل التمارين اليومي (${c.exerciseMins}/120 دقيقة)`);
-      });
-
-      // Run Edge Diagnostic Button
-      document.getElementById('btn-run-diag').addEventListener('click', () => {
-        const c = getSelectedCrew();
-        addLogEntry(c.id, 'فحص روتيني', `تشخيص محلي شامل (Edge Bio-Check): HR=${Math.round(c.hr)} BPM, SpO₂=${c.spo2.toFixed(1)}%, HRV=${Math.round(c.hrv)}ms — القراءات موثقة.`);
-        showToast(`اكتمل الفحص التشخيصي للرائد ${c.name}`);
-      });
-
-      // Export CSV Button — download persisted backend telemetry.
-      document.getElementById('btn-export-csv').addEventListener('click', () => {
-        window.location.href = `${API_BASE}/export/readings.csv`;
-        showToast('جارٍ تنزيل سجل القياسات المحفوظ في قاعدة البيانات');
-      });
-
-      // Clear/Refresh Logs Button
-      document.getElementById('btn-clear-ack').addEventListener('click', () => {
-        renderMedicalLogs();
-        showToast('تمت مزامنة السجل الطبي مع خادم المركبة');
-      });
-
-      // Modal Controls
-      const modal = document.getElementById('modal-medical-log');
-      document.getElementById('btn-open-log-modal').addEventListener('click', () => {
-        document.getElementById('log-input-crew').value = state.selectedCrewId;
-        modal.classList.remove('hidden');
-      });
-      document.getElementById('btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
-      document.getElementById('btn-cancel-modal').addEventListener('click', () => modal.classList.add('hidden'));
-
-      document.getElementById('form-medical-log').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const target = document.getElementById('log-input-crew').value;
-        const type = document.getElementById('log-input-type').value;
-        const note = document.getElementById('log-input-note').value.trim();
-        if (!note) return;
-
-        addLogEntry(target, type, note);
-        document.getElementById('log-input-note').value = '';
-        modal.classList.add('hidden');
-        showToast('تم حفظ الإجراء الطبي في سجل المهمة');
-      });
-    });
-  </script>
-  <script src="/static/expert_system_client.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      if (window.ORIONExpertSystem) {
-        window.ORIONExpertSystem.mount({
-          runButtonId: "btn-expert-analyze",
-          resultsContainerId: "expert-results"
-        });
+        },
+        plugins: {
+          legend: { labels: { color: '#cbd5e1', font: { family: 'Cairo' } } }
+        }
       }
     });
-  </script>
+  }
+
+  // جلب وتحديث حالة النظام من الـ API
+  async function fetchState() {
+    try {
+      const res = await fetch('/api/state');
+      if (!res.ok) return;
+      const data = await res.json();
+      updateECLSS(data.eclss);
+      renderCrew(data.crew);
+      document.getElementById('scenarioSelect').value = data.scenario || 'NOMINAL';
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // تحديث قراءات ECLSS
+  function updateECLSS(eclss) {
+    if (!eclss) return;
+    document.getElementById('pressureVal').innerHTML = `${eclss.pressure || 101.3} <span class="eclss-unit">kPa</span>`;
+    document.getElementById('o2Val').innerHTML = `${eclss.o2 || 20.9} <span class="eclss-unit">%</span>`;
+    document.getElementById('co2Val').innerHTML = `${eclss.co2 || 3.2} <span class="eclss-unit">mmHg</span>`;
+    document.getElementById('radVal').innerHTML = `${eclss.radiation || 0.08} <span class="eclss-unit">µSv/h</span>`;
+    document.getElementById('cabinTempVal').innerHTML = `${eclss.temp || 22.4} <span class="eclss-unit">°C</span>`;
+  }
+
+  // رسم بطاقات رواد الفضاء
+  function renderCrew(crewList) {
+    if (!crewList || crewList.length === 0) return;
+    const container = document.getElementById('crewContainer');
+
+    container.innerHTML = crewList.map(c => {
+      const isActive = c.id === selectedCrewId ? 'active' : '';
+      const avatar = c.role && c.role.includes('Medical') ? '👩‍⚕️' : c.role && c.role.includes('Pilot') ? '👩‍🚀' : '👨‍🚀';
+      const statusClass = c.status || 'NOMINAL';
+
+      return `
+        <div class="crew-card ${isActive}" onclick="selectCrewMember('${c.id}', '${c.name}', ${c.hr}, ${c.spo2})">
+          <div class="crew-corner"></div>
+          <div class="crew-header">
+            <div class="crew-info">
+              <div class="crew-avatar">${avatar}</div>
+              <div>
+                <div class="crew-name">${c.name}</div>
+                <div class="crew-role">${c.role} // ID: ${c.id}</div>
+              </div>
+            </div>
+            <span class="badge ${statusClass}">${statusClass}</span>
+          </div>
+          <div class="crew-vitals">
+            <div class="v-item">
+              <div class="v-label">النبض (HR)</div>
+              <div class="v-val" style="color:var(--cyan-hud);">${c.hr || '--'} <small style="font-size:9px;">BPM</small></div>
+            </div>
+            <div class="v-item">
+              <div class="v-label">الأكسجين (SpO2)</div>
+              <div class="v-val" style="color:var(--normal);">${c.spo2 || '--'} <small style="font-size:9px;">%</small></div>
+            </div>
+            <div class="v-item">
+              <div class="v-label">الضغط (BP)</div>
+              <div class="v-val" style="color:#e2e8f0; font-size:13px;">${c.sys || 120}/${c.dia || 80}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function selectCrewMember(id, name, hr, spo2) {
+    selectedCrewId = id;
+    document.getElementById('chartTitle').innerText = `📈 مخطط التيليمتري اللحظي (${name})`;
+    
+    // محاكاة تحريك المخطط للشخص المحدد
+    if (chart) {
+      chart.data.datasets[0].data.shift();
+      chart.data.datasets[0].data.push(hr || 75);
+      chart.data.datasets[1].data.shift();
+      chart.data.datasets[1].data.push(spo2 || 98);
+      chart.update();
+    }
+    fetchState();
+  }
+
+  // استدعاء محرك النظام الخبير
+  async function fetchExpertAnalysis() {
+    try {
+      const res = await fetch('/api/expert/status');
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const badge = document.getElementById('expertStatusBadge');
+      badge.className = `badge ${data.status}`;
+      badge.innerText = data.status;
+
+      const container = document.getElementById('expertFindings');
+      if (!data.findings || data.findings.length === 0) {
+        container.innerHTML = `
+          <div style="color:var(--normal); text-align:center; padding:20px; font-weight:700;">
+            ✓ جميع المؤشرات الحيوية والبيئية ضمن النطاق الآمن المعياري لـ NASA.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = data.findings.map(f => `
+        <div class="expert-card ${f.severity}">
+          <div class="expert-title">
+            <span>${f.rule_name}</span>
+            <span class="badge ${f.severity}">${f.severity}</span>
+          </div>
+          <div class="expert-desc">${f.explanation || f.message}</div>
+          <div class="expert-rec">💡 الإجراء الموصى به: ${f.recommendation}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // جلب التنبيهات
+  async function fetchAlerts() {
+    try {
+      const res = await fetch('/api/alerts');
+      if (!res.ok) return;
+      const alerts = await res.json();
+      const tbody = document.getElementById('alertsBody');
+
+      if (!alerts || alerts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">لا توجد تنبيهات حرجة مسجلة</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = alerts.map(a => `
+        <tr>
+          <td style="font-family:'Space Grotesk'; font-size:11px; color:var(--text-dim);">${a.created_at ? a.created_at.split('T')[1] : '--'}</td>
+          <td><strong style="color:var(--cyan-hud);">${a.source}</strong></td>
+          <td><span class="badge ${a.severity}">${a.severity}</span></td>
+          <td style="font-weight:700;">${a.title}</td>
+          <td style="color:var(--text-dim); font-size:12px;">${a.message}</td>
+          <td><span style="color:#10b981; font-weight:700;">${a.status}</span></td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // تغيير سيناريو الفضاء
+  async function changeScenario(val) {
+    try {
+      await fetch('/api/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: val })
+      });
+      fetchState();
+      fetchExpertAnalysis();
+      fetchAlerts();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function acknowledgeAll() {
+    try {
+      await fetch('/api/alerts/acknowledge-all', { method: 'POST' });
+      fetchAlerts();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // التشغيل والتحديث التلقائي الدوري
+  window.onload = () => {
+    initChart();
+    fetchState();
+    fetchExpertAnalysis();
+    fetchAlerts();
+
+    // تحديث كل 3 ثوانٍ
+    setInterval(() => {
+      fetchState();
+      fetchExpertAnalysis();
+      fetchAlerts();
+    }, 3000);
+  };
+</script>
+
 </body>
 </html>
