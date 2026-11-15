@@ -1,0 +1,268 @@
+{
+  "name": "AERO-MED ORION-IV Demonstration Knowledge Base",
+  "version": "1.0.0",
+  "description": "Editable IF-THEN rules for the ORION-IV simulated mission dashboard. Thresholds are illustrative software-demo settings only, not validated medical or spacecraft operating limits.",
+  "rules": [
+    {
+      "id": "ECLSS-CO2-CRITICAL",
+      "name": "Critical simulated cabin CO2",
+      "category": "ENVIRONMENT",
+      "scope": "environment",
+      "severity": "CRITICAL",
+      "priority": 10,
+      "enabled": true,
+      "description": "Detects a high simulated cabin partial-pressure CO2 value.",
+      "conditions": [
+        {"fact": "eclss.co2", "operator": "gte", "value": 6.0, "label": "Simulated cabin ppCO2 (mmHg)"}
+      ],
+      "message": "The simulated cabin CO2 value is in the critical demonstration band.",
+      "recommendation": "Review the simulated CDRA / CO2-removal subsystem status and follow the instructor-approved scenario procedure.",
+      "rationale": "The configured demonstration rule marks ppCO2 values at or above 6.0 mmHg for critical review."
+    },
+    {
+      "id": "ECLSS-CO2-HIGH",
+      "name": "Elevated simulated cabin CO2",
+      "category": "ENVIRONMENT",
+      "scope": "environment",
+      "severity": "WARNING",
+      "priority": 20,
+      "enabled": true,
+      "description": "Detects an elevated simulated cabin partial-pressure CO2 value.",
+      "conditions": [
+        {"fact": "eclss.co2", "operator": "gt", "value": 4.5, "label": "Simulated cabin ppCO2 (mmHg)"}
+      ],
+      "message": "The simulated cabin CO2 value exceeds the configured warning level.",
+      "recommendation": "Inspect the CO2-removal subsystem and monitor subsequent simulated readings.",
+      "rationale": "The demonstration warning threshold is greater than 4.5 mmHg."
+    },
+    {
+      "id": "ECLSS-CO2-SCRUBBER-OFF",
+      "name": "CO2 elevated while scrubber boost is inactive",
+      "category": "ENVIRONMENT",
+      "scope": "environment",
+      "severity": "WARNING",
+      "priority": 15,
+      "enabled": true,
+      "description": "Combines elevated simulated CO2 with an inactive CDRA boost flag.",
+      "conditions": [
+        {"fact": "eclss.co2", "operator": "gt", "value": 4.5, "label": "Simulated cabin ppCO2 (mmHg)"},
+        {"fact": "eclss.scrubberHigh", "operator": "eq", "value": false, "label": "CDRA boost mode"}
+      ],
+      "message": "CO2 is elevated while the simulated scrubber boost mode is inactive.",
+      "recommendation": "For this demonstration scenario, consider activating the simulated scrubber boost control and then re-evaluate.",
+      "rationale": "Both the elevated CO2 condition and inactive scrubber-boost flag matched. The engine only recommends a review; it does not actuate hardware."
+    },
+    {
+      "id": "ECLSS-PRESSURE-LOW",
+      "name": "Low simulated cabin pressure",
+      "category": "ENVIRONMENT",
+      "scope": "environment",
+      "severity": "CRITICAL",
+      "priority": 12,
+      "enabled": true,
+      "description": "Detects cabin pressure below the illustrative demo threshold.",
+      "conditions": [
+        {"fact": "eclss.pressure", "operator": "lt", "value": 95.0, "label": "Simulated cabin pressure (kPa)"}
+      ],
+      "message": "The simulated cabin pressure is below the configured demonstration limit.",
+      "recommendation": "Review pressure-sensor status and the simulated pressure-control subsystem; do not treat this as a real spacecraft procedure.",
+      "rationale": "The software demo rule triggers below 95.0 kPa. This value is configurable and not an approved operating limit."
+    },
+    {
+      "id": "ECLSS-OXYGEN-LOW",
+      "name": "Low simulated cabin oxygen concentration",
+      "category": "ENVIRONMENT",
+      "scope": "environment",
+      "severity": "WARNING",
+      "priority": 30,
+      "enabled": true,
+      "description": "Detects a low simulated oxygen concentration.",
+      "conditions": [
+        {"fact": "eclss.o2", "operator": "lt", "value": 19.5, "label": "Simulated cabin oxygen (%)"}
+      ],
+      "message": "The simulated cabin oxygen concentration is below the configured demo level.",
+      "recommendation": "Inspect the simulated oxygen-generation and atmosphere-monitoring subsystems.",
+      "rationale": "The demonstration rule triggers below 19.5 percent."
+    },
+    {
+      "id": "ECLSS-RADIATION-HIGH",
+      "name": "Elevated simulated radiation flux",
+      "category": "RADIATION",
+      "scope": "environment",
+      "severity": "CRITICAL",
+      "priority": 5,
+      "enabled": true,
+      "description": "Detects a high simulated radiation-flux value.",
+      "conditions": [
+        {"fact": "eclss.radFlux", "operator": "gt", "value": 1.5, "label": "Simulated radiation flux (mSv/day)"}
+      ],
+      "message": "The simulated radiation-flux value exceeds the configured demonstration threshold.",
+      "recommendation": "Review the simulated radiation-monitoring state and the scenario's shelter/shield controls.",
+      "rationale": "The current backend demo alert uses a 1.5 mSv/day trigger; this expert rule retains that software-demo threshold for consistency."
+    },
+    {
+      "id": "SOLAR-STORM-SHIELD-INACTIVE",
+      "name": "Solar-storm scenario while shield is inactive",
+      "category": "RADIATION",
+      "scope": "environment",
+      "severity": "CRITICAL",
+      "priority": 1,
+      "enabled": true,
+      "description": "Detects the solar-storm simulation while shield control is inactive and radiation flux is elevated.",
+      "conditions": [
+        {"fact": "scenario", "operator": "eq", "value": "SOLAR_STORM", "label": "Active simulation scenario"},
+        {"fact": "eclss.radFlux", "operator": "gt", "value": 1.5, "label": "Simulated radiation flux (mSv/day)"},
+        {"fact": "eclss.shieldActive", "operator": "eq", "value": false, "label": "Simulated shield status"}
+      ],
+      "message": "The solar-storm scenario is active, radiation flux is elevated, and the simulated shield is inactive.",
+      "recommendation": "Review the shelter and shield controls in the simulation. No physical shield or spacecraft control is connected to this expert system.",
+      "rationale": "This is a scenario-specific rule combining the scenario label, radiation value, and shield flag."
+    },
+    {
+      "id": "CREW-STATUS-CRITICAL",
+      "name": "Crew status marked critical",
+      "category": "BIOMEDICAL_DEMO",
+      "scope": "crew",
+      "severity": "CRITICAL",
+      "priority": 2,
+      "enabled": true,
+      "description": "Surfaces a CRITICAL status already present in the simulated crew record.",
+      "conditions": [
+        {"fact": "crew.status", "operator": "eq", "value": "CRITICAL", "label": "Simulated crew status"}
+      ],
+      "message": "The crew record is already marked CRITICAL by the simulation.",
+      "recommendation": "Review the simulated crew record and the active scenario; this flag is not a clinical assessment.",
+      "rationale": "The inference engine detected the explicit CRITICAL status value in the input data."
+    },
+    {
+      "id": "CREW-HR-CRITICAL",
+      "name": "High simulated heart rate",
+      "category": "BIOMEDICAL_DEMO",
+      "scope": "crew",
+      "severity": "CRITICAL",
+      "priority": 8,
+      "enabled": true,
+      "description": "Detects a heart-rate value above the illustrative demo threshold.",
+      "conditions": [
+        {"fact": "crew.hr", "operator": "gt", "value": 125, "label": "Simulated heart rate (BPM)"}
+      ],
+      "message": "The simulated heart-rate value exceeds the configured demonstration threshold.",
+      "recommendation": "Flag this simulated record for human review and inspect the scenario context.",
+      "rationale": "The demonstration rule triggers above 125 BPM; it is not a medical threshold."
+    },
+    {
+      "id": "CREW-HR-WARNING",
+      "name": "Elevated simulated heart rate",
+      "category": "BIOMEDICAL_DEMO",
+      "scope": "crew",
+      "severity": "WARNING",
+      "priority": 25,
+      "enabled": true,
+      "description": "Detects an elevated but non-critical simulated heart-rate value.",
+      "conditions": [
+        {"fact": "crew.hr", "operator": "gt", "value": 100, "label": "Simulated heart rate (BPM)"},
+        {"fact": "crew.hr", "operator": "lte", "value": 125, "label": "Simulated heart rate (BPM)"}
+      ],
+      "message": "The simulated heart-rate value is above the configured warning band.",
+      "recommendation": "Review activity context and observe subsequent simulated readings.",
+      "rationale": "The demonstration rule matches heart rate greater than 100 and no greater than 125 BPM."
+    },
+    {
+      "id": "CREW-SPO2-CRITICAL",
+      "name": "Low simulated SpO2",
+      "category": "BIOMEDICAL_DEMO",
+      "scope": "crew",
+      "severity": "CRITICAL",
+      "priority": 7,
+      "enabled": true,
+      "description": "Detects simulated SpO2 below the illustrative demo threshold.",
+      "conditions": [
+        {"fact": "crew.spo2", "operator": "lt", "value": 94, "label": "Simulated SpO2 (%)"}
+      ],
+      "message": "The simulated SpO2 value is below the configured demonstration threshold.",
+      "recommendation": "Flag the simulated record for human review; do not interpret this result as a diagnosis.",
+      "rationale": "The demonstration rule triggers below 94 percent."
+    },
+    {
+      "id": "CREW-SPO2-WARNING",
+      "name": "Reduced simulated SpO2",
+      "category": "BIOMEDICAL_DEMO",
+      "scope": "crew",
+      "severity": "WARNING",
+      "priority": 26,
+      "enabled": true,
+      "description": "Detects a reduced but non-critical simulated SpO2 value.",
+      "conditions": [
+        {"fact": "crew.spo2", "operator": "lt", "value": 96, "label": "Simulated SpO2 (%)"},
+        {"fact": "crew.spo2", "operator": "gte", "value": 94, "label": "Simulated SpO2 (%)"}
+      ],
+      "message": "The simulated SpO2 value is below the configured warning band.",
+      "recommendation": "Review the simulated sensor reading and scenario context.",
+      "rationale": "The demonstration rule matches SpO2 from 94 percent up to, but not including, 96 percent."
+    },
+    {
+      "id": "CREW-RESP-RATE-HIGH",
+      "name": "Elevated simulated respiratory rate",
+      "category": "BIOMEDICAL_DEMO",
+      "scope": "crew",
+      "severity": "WARNING",
+      "priority": 35,
+      "enabled": true,
+      "description": "Detects a simulated respiratory-rate value above the illustrative demo threshold.",
+      "conditions": [
+        {"fact": "crew.resp", "operator": "gt", "value": 24, "label": "Simulated respiratory rate (breaths/min)"}
+      ],
+      "message": "The simulated respiratory-rate value is elevated relative to the configured demo rule.",
+      "recommendation": "Review activity and environmental scenario context, then observe subsequent simulated readings.",
+      "rationale": "The software-demo rule triggers above 24 breaths per minute."
+    },
+    {
+      "id": "CREW-TEMPERATURE-HIGH",
+      "name": "Elevated simulated body temperature",
+      "category": "BIOMEDICAL_DEMO",
+      "scope": "crew",
+      "severity": "WARNING",
+      "priority": 36,
+      "enabled": true,
+      "description": "Detects a simulated body-temperature value above the illustrative demo threshold.",
+      "conditions": [
+        {"fact": "crew.temp", "operator": "gt", "value": 38.0, "label": "Simulated body temperature (°C)"}
+      ],
+      "message": "The simulated body-temperature value exceeds the configured demo rule.",
+      "recommendation": "Review the simulated record, its sensor quality, and the scenario context.",
+      "rationale": "The software-demo rule triggers above 38.0 °C; it is not a clinical threshold."
+    },
+    {
+      "id": "SENSOR-BATTERY-LOW",
+      "name": "Low crew sensor-node battery",
+      "category": "SENSOR_HEALTH",
+      "scope": "sensor",
+      "severity": "WARNING",
+      "priority": 45,
+      "enabled": true,
+      "description": "Detects a simulated sensor-node battery below the demo maintenance threshold.",
+      "conditions": [
+        {"fact": "sensor.battery", "operator": "lt", "value": 20, "label": "Simulated sensor battery (%)"}
+      ],
+      "message": "A simulated crew sensor node has a low battery value.",
+      "recommendation": "Review the sensor node and plan a simulated battery replacement or recharge.",
+      "rationale": "The demonstration maintenance rule triggers below 20 percent battery."
+    },
+    {
+      "id": "SENSOR-NODE-FAULT",
+      "name": "Crew sensor node reports a fault",
+      "category": "SENSOR_HEALTH",
+      "scope": "sensor",
+      "severity": "WARNING",
+      "priority": 44,
+      "enabled": true,
+      "description": "Detects a sensor-node status other than OK.",
+      "conditions": [
+        {"fact": "sensor.status", "operator": "neq", "value": "OK", "label": "Simulated sensor node status"}
+      ],
+      "message": "A crew sensor node is not reporting OK status in the simulated record.",
+      "recommendation": "Inspect the node connection and validate its next simulated reading.",
+      "rationale": "The status field is present and differs from the expected demo value OK."
+    }
+  ]
+}
