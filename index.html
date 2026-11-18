@@ -352,9 +352,140 @@
       transition: all 0.2s;
     }
     .btn-action:hover { box-shadow: 0 0 12px var(--cyan-glow); transform: translateY(-1px); }
+
+    /* بوابة الدخول / مستخدم جديد */
+    .auth-hidden { display: none !important; }
+    .auth-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      background: radial-gradient(circle at 50% 35%, rgba(11,61,145,0.55), rgba(5,7,13,0.97) 70%);
+      backdrop-filter: blur(10px);
+    }
+    .auth-card {
+      width: 100%; max-width: 470px;
+      background: var(--space-card);
+      border: 1px solid var(--border-hud);
+      border-radius: 18px; padding: 26px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px var(--cyan-glow);
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .auth-title {
+      font-family: 'Orbitron'; font-size: 18px; letter-spacing: 1px;
+      text-align: center; color: #fff;
+    }
+    .auth-subtitle { font-size: 12px; color: var(--text-dim); text-align: center; margin-top: 4px; }
+    .auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .auth-tab {
+      background: rgba(5,7,13,0.7); color: var(--text-dim);
+      border: 1px solid var(--border-hud); border-radius: 9px;
+      padding: 10px; font-family: 'Space Grotesk'; font-weight: 800;
+      font-size: 13px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+    }
+    .auth-tab:hover { border-color: var(--cyan-hud); color: #fff; }
+    .auth-tab.active {
+      background: linear-gradient(135deg, var(--nasa-blue), #2563eb);
+      border-color: var(--cyan-hud); color: #fff;
+      box-shadow: 0 0 14px var(--cyan-glow);
+    }
+    .auth-form { display: flex; flex-direction: column; gap: 12px; }
+    .auth-form label { font-size: 12px; color: var(--cyan-hud); font-weight: 700; font-family: 'Space Grotesk'; }
+    .auth-form input {
+      width: 100%; background: #080d17; border: 1px solid rgba(0,240,255,0.25);
+      color: #fff; border-radius: 8px; padding: 10px 12px;
+      font-family: 'Space Grotesk'; font-size: 14px; outline: none;
+    }
+    .auth-form input:focus { border-color: var(--cyan-hud); box-shadow: 0 0 10px var(--cyan-glow); }
+    .auth-submit {
+      background: linear-gradient(135deg, var(--nasa-blue), #2563eb);
+      border: 1px solid var(--cyan-hud); color: #fff; border-radius: 9px;
+      padding: 11px; font-family: 'Space Grotesk'; font-weight: 800;
+      font-size: 13px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+    }
+    .auth-submit:hover { box-shadow: 0 0 16px var(--cyan-glow); transform: translateY(-1px); }
+    .auth-msg { font-size: 12px; min-height: 18px; text-align: center; color: var(--text-dim); }
+    .auth-msg.error { color: #ff6b52; font-weight: 700; }
+    .auth-msg.ok { color: #34d399; font-weight: 700; }
+    .demo-box { border-top: 1px solid var(--border-hud); padding-top: 12px; }
+    .demo-box summary {
+      cursor: pointer; font-size: 12px; color: var(--cyan-hud);
+      font-family: 'Space Grotesk'; font-weight: 700;
+    }
+    .demo-list {
+      margin-top: 10px; max-height: 180px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 4px;
+      font-family: 'Space Grotesk'; font-size: 11px; color: var(--text-dim);
+    }
+    .demo-row {
+      display: flex; justify-content: space-between; gap: 10px;
+      background: rgba(5,7,13,0.7); border: 1px solid rgba(0,240,255,0.08);
+      border-radius: 6px; padding: 6px 9px;
+    }
+    .demo-row span:last-child { color: #fff; white-space: nowrap; }
+    .logout-btn {
+      background: rgba(252,61,33,0.12); border: 1px solid var(--nasa-red);
+      color: #ff8a75; border-radius: 9px; padding: 9px 14px;
+      font-family: 'Space Grotesk'; font-weight: 800; font-size: 12px;
+      letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+    }
+    .logout-btn:hover { background: rgba(252,61,33,0.25); color: #fff; }
   </style>
 </head>
 <body>
+
+<!-- بوابة الدخول: يجب تسجيل الدخول أو إنشاء حساب قبل عرض اللوحة -->
+<div id="authOverlay" class="auth-overlay" dir="ltr">
+  <div class="auth-card">
+    <div>
+      <div class="auth-title">AERO-MED // ORION-IV</div>
+      <div class="auth-subtitle">Astronaut bio-telemetry access — sign in to continue</div>
+    </div>
+
+    <div class="auth-tabs">
+      <button type="button" id="authTabLogin" class="auth-tab active" onclick="showAuthPanel('login')">LOGIN</button>
+      <button type="button" id="authTabRegister" class="auth-tab" onclick="showAuthPanel('register')">NEW USER</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+      <div>
+        <label for="loginId">Astronaut ID</label>
+        <input id="loginId" type="text" autocomplete="username" placeholder="AST-001" pattern="AST-[0-9]{3}" required />
+      </div>
+      <div>
+        <label for="loginPassword">Numeric password</label>
+        <input id="loginPassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="6 digits" pattern="[0-9]{4,8}" required />
+      </div>
+      <button type="submit" class="auth-submit">LOGIN</button>
+    </form>
+
+    <form id="registerForm" class="auth-form auth-hidden">
+      <div>
+        <label for="regName">Full name (must match the astronaut roster)</label>
+        <input id="regName" type="text" autocomplete="name" placeholder="Alex Morgan" required />
+      </div>
+      <div>
+        <label for="regId">Astronaut ID</label>
+        <input id="regId" type="text" placeholder="AST-006" pattern="AST-[0-9]{3}" required />
+      </div>
+      <div>
+        <label for="regPassword">Numeric password (from the roster)</label>
+        <input id="regPassword" type="password" inputmode="numeric" pattern="[0-9]{4,8}" required />
+      </div>
+      <div>
+        <label for="regConfirm">Confirm numeric password</label>
+        <input id="regConfirm" type="password" inputmode="numeric" pattern="[0-9]{4,8}" required />
+      </div>
+      <button type="submit" class="auth-submit">CREATE ACCOUNT</button>
+    </form>
+
+    <div id="authMessage" class="auth-msg"></div>
+
+    <details class="demo-box">
+      <summary>Demo astronaut accounts (click to expand)</summary>
+      <div id="demoRoster" class="demo-list">Loading roster…</div>
+    </details>
+  </div>
+</div>
 
 <div class="container">
   <!-- شريط تعريف NASA Space Apps الرسمي -->
@@ -389,6 +520,8 @@
         <option value="EVA_FATIGUE">إجهاد مهمة سير فضائي (EVA Fatigue)</option>
       </select>
     </div>
+
+    <button id="logoutBtn" class="logout-btn auth-hidden" onclick="logout()" title="Sign out">LOG OUT</button>
   </header>
 
   <!-- نظام دعم الحياة والبيئة (ECLSS Panel) -->
@@ -494,6 +627,165 @@
 <script>
   let selectedCrewId = "AST-001";
   let chart = null;
+  let currentMissionState = null;
+
+  // ===== بوابة المصادقة (LOGIN / NEW USER) =====
+  const TOKEN_KEY = 'aeromed_session_token';
+  let dashboardStarted = false;
+
+  // Same-origin by default. When the HTML is opened directly (file://) or by
+  // another local server (e.g. Live Server), talk to the FastAPI server instead.
+  const BACKEND_HINT = 'Start the backend: uvicorn main:app --port 8001 --reload — then open http://localhost:8001/';
+  const queryApi = new URLSearchParams(location.search).get('api');
+  const API_BASE = queryApi || (location.protocol === 'file:' ? 'http://localhost:8001' : '');
+
+  function getToken() { return sessionStorage.getItem(TOKEN_KEY) || ''; }
+  function setToken(token) { sessionStorage.setItem(TOKEN_KEY, token); }
+  function clearToken() { sessionStorage.removeItem(TOKEN_KEY); }
+
+  function authFetch(path, options = {}) {
+    const headers = { ...(options.headers || {}) };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(API_BASE + path, { ...options, headers }).then((res) => {
+      if (res.status === 401 && !path.startsWith('/api/auth/')) {
+        clearToken();
+        showAuthOverlay('Session expired. Please log in again.', 'error');
+      }
+      return res;
+    });
+  }
+
+  function describeFetchError(err) {
+    return err instanceof TypeError ? `Cannot reach the backend. ${BACKEND_HINT}` : err.message;
+  }
+
+  function showAuthOverlay(message = '', kind = '') {
+    document.getElementById('authOverlay').classList.remove('auth-hidden');
+    document.getElementById('logoutBtn').classList.add('auth-hidden');
+    const msg = document.getElementById('authMessage');
+    msg.textContent = message;
+    msg.className = `auth-msg ${kind}`;
+  }
+
+  function hideAuthOverlay() {
+    document.getElementById('authOverlay').classList.add('auth-hidden');
+    document.getElementById('logoutBtn').classList.remove('auth-hidden');
+  }
+
+  function showAuthPanel(which) {
+    const isLogin = which === 'login';
+    document.getElementById('loginForm').classList.toggle('auth-hidden', !isLogin);
+    document.getElementById('registerForm').classList.toggle('auth-hidden', isLogin);
+    document.getElementById('authTabLogin').classList.toggle('active', isLogin);
+    document.getElementById('authTabRegister').classList.toggle('active', !isLogin);
+    document.getElementById('authMessage').textContent = '';
+  }
+
+  async function loadDemoRoster() {
+    const box = document.getElementById('demoRoster');
+    try {
+      const res = await fetch(API_BASE + '/api/auth/roster');
+      const data = await res.json();
+      box.innerHTML = data.items.map((a) => `
+        <div class="demo-row">
+          <span>${a.id} · ${a.name}</span>
+          <span>${a.password} · ${a.registered ? 'registered' : 'new user'}</span>
+        </div>
+      `).join('');
+      return true;
+    } catch (e) {
+      box.textContent = `Roster unavailable. ${BACKEND_HINT}`;
+      return false;
+    }
+  }
+
+  async function postAuth(path, payload) {
+    const res = await fetch(API_BASE + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  }
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    const msg = document.getElementById('authMessage');
+    msg.textContent = 'Signing in…'; msg.className = 'auth-msg';
+    try {
+      const data = await postAuth('/api/auth/login', {
+        astronaut_id: document.getElementById('loginId').value.trim(),
+        password: document.getElementById('loginPassword').value
+      });
+      setToken(data.token);
+      unlockDashboard();
+    } catch (err) {
+      msg.textContent = describeFetchError(err); msg.className = 'auth-msg error';
+    }
+  }
+
+  async function handleRegister(event) {
+    event.preventDefault();
+    const msg = document.getElementById('authMessage');
+    const password = document.getElementById('regPassword').value;
+    if (password !== document.getElementById('regConfirm').value) {
+      msg.textContent = 'Passwords do not match.'; msg.className = 'auth-msg error';
+      return;
+    }
+    msg.textContent = 'Creating account…'; msg.className = 'auth-msg';
+    try {
+      const data = await postAuth('/api/auth/register', {
+        name: document.getElementById('regName').value.trim(),
+        astronaut_id: document.getElementById('regId').value.trim(),
+        password: password
+      });
+      setToken(data.token);
+      unlockDashboard();
+    } catch (err) {
+      msg.textContent = describeFetchError(err); msg.className = 'auth-msg error';
+    }
+  }
+
+  async function validateSession() {
+    if (!getToken()) return false;
+    try {
+      const res = await authFetch('/api/auth/me');
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function logout() {
+    try {
+      await fetch(API_BASE + '/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+    } catch (e) { /* offline logout still clears local session */ }
+    clearToken();
+    showAuthOverlay('You have been logged out.', 'ok');
+  }
+
+  function unlockDashboard() {
+    hideAuthOverlay();
+    if (!dashboardStarted) {
+      dashboardStarted = true;
+      initChart();
+      setInterval(() => {
+        if (!getToken()) return;
+        fetchState();
+        fetchExpertAnalysis();
+        fetchAlerts();
+      }, 3000);
+    }
+    fetchState();
+    fetchExpertAnalysis();
+    fetchAlerts();
+  }
 
   // إعداد الرسم البياني Chart.js
   function initChart() {
@@ -553,13 +845,16 @@
 
   // جلب وتحديث حالة النظام من الـ API
   async function fetchState() {
+    if (!getToken()) return;
     try {
-      const res = await fetch('/api/state');
+      const res = await authFetch('/api/state');
       if (!res.ok) return;
       const data = await res.json();
-      updateECLSS(data.eclss);
-      renderCrew(data.crew);
-      document.getElementById('scenarioSelect').value = data.scenario || 'NOMINAL';
+      if (!data.state) return;
+      currentMissionState = data.state;
+      updateECLSS(currentMissionState.eclss);
+      renderCrew(currentMissionState.crew);
+      document.getElementById('scenarioSelect').value = currentMissionState.scenario || 'NOMINAL';
     } catch (e) {
       console.error(e);
     }
@@ -634,8 +929,9 @@
 
   // استدعاء محرك النظام الخبير
   async function fetchExpertAnalysis() {
+    if (!getToken()) return;
     try {
-      const res = await fetch('/api/expert/status');
+      const res = await authFetch('/api/expert/status');
       if (!res.ok) return;
       const data = await res.json();
 
@@ -670,10 +966,12 @@
 
   // جلب التنبيهات
   async function fetchAlerts() {
+    if (!getToken()) return;
     try {
-      const res = await fetch('/api/alerts');
+      const res = await authFetch('/api/alerts');
       if (!res.ok) return;
-      const alerts = await res.json();
+      const payload = await res.json();
+      const alerts = Array.isArray(payload) ? payload : (payload.items || []);
       const tbody = document.getElementById('alertsBody');
 
       if (!alerts || alerts.length === 0) {
@@ -698,11 +996,14 @@
 
   // تغيير سيناريو الفضاء
   async function changeScenario(val) {
+    if (!getToken() || !currentMissionState) return;
     try {
-      await fetch('/api/telemetry', {
+      const snapshot = JSON.parse(JSON.stringify(currentMissionState));
+      snapshot.scenario = val;
+      await authFetch('/api/telemetry', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: val })
+        body: JSON.stringify(snapshot)
       });
       fetchState();
       fetchExpertAnalysis();
@@ -713,27 +1014,28 @@
   }
 
   async function acknowledgeAll() {
+    if (!getToken()) return;
     try {
-      await fetch('/api/alerts/acknowledge-all', { method: 'POST' });
+      await authFetch('/api/alerts/acknowledge-all', { method: 'POST' });
       fetchAlerts();
     } catch (e) {
       console.error(e);
     }
   }
 
-  // التشغيل والتحديث التلقائي الدوري
-  window.onload = () => {
-    initChart();
-    fetchState();
-    fetchExpertAnalysis();
-    fetchAlerts();
+  // بوابة الدخول تُعرض أولاً، ثم تُفتح اللوحة بعد نجاح المصادقة
+  window.onload = async () => {
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    document.getElementById('registerForm').addEventListener('submit', handleRegister);
 
-    // تحديث كل 3 ثوانٍ
-    setInterval(() => {
-      fetchState();
-      fetchExpertAnalysis();
-      fetchAlerts();
-    }, 3000);
+    const rosterReachable = await loadDemoRoster();
+    if (await validateSession()) {
+      unlockDashboard();
+    } else if (rosterReachable) {
+      showAuthOverlay();
+    } else {
+      showAuthOverlay(`Cannot reach the backend. ${BACKEND_HINT}`, 'error');
+    }
   };
 </script>
 
