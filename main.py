@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import hmac
 import io
 import json
 import os
+import secrets
 import sqlite3
 import threading
+import time
 from datetime import datetime, timezone
 from contextlib import contextmanager
 from pathlib import Path
@@ -14,7 +17,7 @@ from typing import Any, Iterator
 
 from expert_system import build_input_snapshot, get_rule_catalog, run_expert_system
 
-from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,9 +26,30 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR / "data")))
 DB_PATH = DATA_DIR / "orion_iv.sqlite3"
 FRONTEND_PATH = BASE_DIR / "index.html"
+ADMIN_PATH = BASE_DIR / "admin.html"
 DB_LOCK = threading.RLock()
 
 STATIC_DIR = BASE_DIR / "static"
+
+# Demo astronaut roster. Passwords are numeric and intentionally documented in
+# README.md so the competition demo can be exercised without a mail service.
+# The first INITIAL_REGISTERED_COUNT astronauts already have accounts; the rest
+# must create one through /api/auth/register after matching their ID and name.
+ASTRONAUT_ROSTER: list[dict[str, str]] = [
+    {"id": "AST-001", "name": "Alex Morgan", "password": "482913"},
+    {"id": "AST-002", "name": "Emily Carter", "password": "739156"},
+    {"id": "AST-003", "name": "James Wilson", "password": "264807"},
+    {"id": "AST-004", "name": "Olivia Bennett", "password": "915342"},
+    {"id": "AST-005", "name": "Noah Davis", "password": "357921"},
+    {"id": "AST-006", "name": "Sophia Martinez", "password": "684015"},
+    {"id": "AST-007", "name": "Liam Anderson", "password": "829374"},
+    {"id": "AST-008", "name": "Ava Thompson", "password": "147258"},
+    {"id": "AST-009", "name": "Ethan Clark", "password": "503861"},
+    {"id": "AST-010", "name": "Isabella Rivera", "password": "970416"},
+]
+INITIAL_REGISTERED_COUNT = 5
+SESSION_TTL_SECONDS = 8 * 60 * 60
+PBKDF2_ITERATIONS = 120_000
 
 app = FastAPI(
     title="AERO-MED ORION-IV Backend",
@@ -52,6 +76,65 @@ app.add_middleware(
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, PBKDF2_ITERATIONS
+    )
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password: str, encoded: str) -> bool:
+    try:
+        algorithm, iterations, salt_hex, digest_hex = encoded.split("$", 3)
+        if algorithm != "pbkdf2_sha256":
+            return False
+        digest = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            bytes.fromhex(salt_hex),
+            int(iterations),
+        )
+        return hmac.compare_digest(digest.hex(), digest_hex)
+    except (ValueError, TypeError):
+        return False
+
+
+def create_session(conn: sqlite3.Connection, account_id: int) -> str:
+    token = secrets.token_urlsafe(32)
+    now = time.time()
+    conn.execute(
+        "INSERT INTO sessions (token, account_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+        (token, account_id, now, now + SESSION_TTL_SECONDS),
+    )
+    return token
+
+
+def require_auth(
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """Return the signed-in account or fail with 401 for protected endpoints."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    with DB_LOCK, connect_db() as conn:
+        row = conn.execute(
+            """SELECT acc.id, acc.astronaut_id, ast.name
+               FROM sessions s
+               JOIN accounts acc ON acc.id = s.account_id
+               JOIN astronauts ast ON ast.astronaut_id = acc.astronaut_id
+               WHERE s.token=? AND s.expires_at>?""",
+            (token, time.time()),
+        ).fetchone()
+    if not row:
+        raise HTTPException(
+            status_code=401, detail="Session invalid or expired. Please log in again."
+        )
+    return dict(row)
 
 
 @contextmanager
@@ -140,8 +223,100 @@ def init_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_expert_decisions_time
                 ON expert_decisions(created_at DESC);
+
+            CREATE TABLE IF NOT EXISTS astronauts (
+                astronaut_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                astronaut_id TEXT NOT NULL UNIQUE
+                    REFERENCES astronauts(astronaut_id),
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS sessions (
+                token TEXT PRIMARY KEY,
+                account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+                created_at TEXT NOT NULL,
+                expires_at REAL NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_sessions_expiry
+                ON sessions(expires_at);
             """
         )
+        seed_accounts(conn)
+        if load_state(conn) is None:
+            seed_default_state(conn, utc_now())
+
+
+def seed_accounts(conn: sqlite3.Connection) -> None:
+    """Insert the demo roster and pre-register the first few astronauts."""
+    now = utc_now()
+    for entry in ASTRONAUT_ROSTER:
+        conn.execute(
+            "INSERT OR IGNORE INTO astronauts (astronaut_id, name) VALUES (?, ?)",
+            (entry["id"], entry["name"]),
+        )
+
+    for entry in ASTRONAUT_ROSTER[:INITIAL_REGISTERED_COUNT]:
+        exists = conn.execute(
+            "SELECT 1 FROM accounts WHERE astronaut_id=?", (entry["id"],)
+        ).fetchone()
+        if exists:
+            continue
+        conn.execute(
+            """INSERT INTO accounts (astronaut_id, password_hash, created_at)
+               VALUES (?, ?, ?)""",
+            (entry["id"], hash_password(entry["password"]), now),
+        )
+
+
+def seed_default_state(conn: sqlite3.Connection, now: str) -> None:
+    """Give a fresh database a nominal starting mission for the gated dashboard."""
+    crew: list[dict[str, Any]] = []
+    for index, entry in enumerate(ASTRONAUT_ROSTER, start=1):
+        crew.append(
+            {
+                "id": entry["id"],
+                "name": entry["name"],
+                "role": "Mission Specialist",
+                "status": "NOMINAL",
+                "activity": "Orbital monitoring",
+                "hr": 68 + index,
+                "hrv": 52,
+                "spo2": 98.0,
+                "sys": 118,
+                "dia": 76,
+                "temp": 36.8,
+                "resp": 15,
+                "radDose": float(40 + index),
+                "nodes": [],
+                "history": {
+                    "hr": [70, 71, 69, 72, 71, 70, 71],
+                    "spo2": [98.0, 98.1, 97.9, 98.0, 98.0, 98.1, 98.0],
+                },
+            }
+        )
+    state = {
+        "scenario": "NOMINAL",
+        "eclss": {
+            "pressure": 101.3,
+            "o2": 20.9,
+            "co2": 3.2,
+            "radFlux": 0.08,
+            "scrubberHigh": False,
+            "shieldActive": False,
+        },
+        "crew": crew,
+        "logs": [],
+    }
+    conn.execute(
+        "INSERT INTO app_state (state_key, payload, updated_at) VALUES ('mission', ?, ?)",
+        (json.dumps(state, ensure_ascii=False, allow_nan=False), now),
+    )
 
 
 @app.on_event("startup")
@@ -352,6 +527,14 @@ def frontend() -> FileResponse:
     return FileResponse(FRONTEND_PATH)
 
 
+@app.get("/admin.html", include_in_schema=False)
+@app.get("/admin", include_in_schema=False)
+def admin_frontend() -> FileResponse:
+    if not ADMIN_PATH.exists():
+        raise HTTPException(status_code=404, detail="admin.html was not found beside main.py.")
+    return FileResponse(ADMIN_PATH)
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     with DB_LOCK, connect_db() as conn:
@@ -359,21 +542,137 @@ def health() -> dict[str, Any]:
     return {"status": "ok", "service": "AERO-MED ORION-IV API", "timestamp": utc_now()}
 
 
+@app.get("/api/auth/roster")
+def auth_roster() -> dict[str, Any]:
+    """Public demo roster: IDs, names, numeric passwords, and account status."""
+    with DB_LOCK, connect_db() as conn:
+        registered = {
+            row["astronaut_id"]
+            for row in conn.execute("SELECT astronaut_id FROM accounts").fetchall()
+        }
+    items = [
+        {
+            "id": entry["id"],
+            "name": entry["name"],
+            "password": entry["password"],
+            "registered": entry["id"] in registered,
+        }
+        for entry in ASTRONAUT_ROSTER
+    ]
+    return {"items": items, "count": len(items)}
+
+
+@app.post("/api/auth/register")
+def auth_register(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    astronaut_id = str(payload.get("astronaut_id", "")).strip().upper()
+    name = str(payload.get("name", "")).strip()
+    password = str(payload.get("password", ""))
+
+    entry = next((item for item in ASTRONAUT_ROSTER if item["id"] == astronaut_id), None)
+    if entry is None:
+        raise HTTPException(
+            status_code=403, detail="ID not found in the astronaut roster."
+        )
+    if name.casefold() != entry["name"].casefold():
+        raise HTTPException(
+            status_code=403, detail="Name does not match the astronaut roster record."
+        )
+    if not password.isdigit() or not 4 <= len(password) <= 8:
+        raise HTTPException(
+            status_code=422, detail="Password must be 4 to 8 numeric digits."
+        )
+    if password != entry["password"]:
+        raise HTTPException(
+            status_code=403, detail="Password does not match the astronaut roster record."
+        )
+
+    with DB_LOCK, connect_db() as conn:
+        if conn.execute(
+            "SELECT 1 FROM accounts WHERE astronaut_id=?", (astronaut_id,)
+        ).fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="This astronaut already has an account. Use LOGIN instead.",
+            )
+        cursor = conn.execute(
+            """INSERT INTO accounts (astronaut_id, password_hash, created_at)
+               VALUES (?, ?, ?)""",
+            (astronaut_id, hash_password(password), utc_now()),
+        )
+        token = create_session(conn, int(cursor.lastrowid))
+
+    return {
+        "ok": True,
+        "token": token,
+        "astronaut_id": astronaut_id,
+        "name": entry["name"],
+        "message": "Astronaut account created.",
+    }
+
+
+@app.post("/api/auth/login")
+def auth_login(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    astronaut_id = str(payload.get("astronaut_id", "")).strip().upper()
+    password = str(payload.get("password", ""))
+
+    with DB_LOCK, connect_db() as conn:
+        row = conn.execute(
+            """SELECT acc.id, acc.password_hash, ast.name
+               FROM accounts acc
+               JOIN astronauts ast ON ast.astronaut_id = acc.astronaut_id
+               WHERE acc.astronaut_id=?""",
+            (astronaut_id,),
+        ).fetchone()
+        if not row or not verify_password(password, row["password_hash"]):
+            raise HTTPException(
+                status_code=401, detail="Invalid astronaut ID or password."
+            )
+        token = create_session(conn, int(row["id"]))
+
+    return {
+        "ok": True,
+        "token": token,
+        "astronaut_id": astronaut_id,
+        "name": row["name"],
+        "message": "Login successful.",
+    }
+
+
+@app.post("/api/auth/logout")
+def auth_logout(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        with DB_LOCK, connect_db() as conn:
+            conn.execute("DELETE FROM sessions WHERE token=?", (token,))
+    return {"ok": True, "message": "Logged out."}
+
+
+@app.get("/api/auth/me")
+def auth_me(account: dict[str, Any] = Depends(require_auth)) -> dict[str, Any]:
+    return {"account": account}
+
+
 @app.get("/api/state")
-def get_state() -> dict[str, Any]:
+def get_state(account: dict[str, Any] = Depends(require_auth)) -> dict[str, Any]:
     with DB_LOCK, connect_db() as conn:
         return {"state": load_state(conn), "updated_at": utc_now()}
 
 
 @app.put("/api/state")
-def put_state(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+def put_state(
+    payload: dict[str, Any] = Body(...),
+    account: dict[str, Any] = Depends(require_auth),
+) -> dict[str, Any]:
     state = validate_state(payload)
     persist_state(state, record_readings=False)
     return {"ok": True, "message": "Mission state saved.", "updated_at": utc_now()}
 
 
 @app.post("/api/telemetry")
-def post_telemetry(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+def post_telemetry(
+    payload: dict[str, Any] = Body(...),
+    account: dict[str, Any] = Depends(require_auth),
+) -> dict[str, Any]:
     state = validate_state(payload)
     persist_state(state, record_readings=True)
     return {"ok": True, "message": "Telemetry snapshot stored.", "crew_count": len(state["crew"]), "recorded_at": utc_now()}
@@ -399,7 +698,11 @@ def get_readings(
 
 
 @app.get("/api/alerts")
-def get_alerts(status: str | None = None, limit: int = Query(default=100, ge=1, le=1000)) -> dict[str, Any]:
+def get_alerts(
+    status: str | None = None,
+    limit: int = Query(default=100, ge=1, le=1000),
+    account: dict[str, Any] = Depends(require_auth),
+) -> dict[str, Any]:
     with DB_LOCK, connect_db() as conn:
         if status:
             rows = conn.execute(
@@ -426,7 +729,9 @@ def acknowledge_alert(alert_id: int) -> dict[str, Any]:
 
 
 @app.post("/api/alerts/acknowledge-all")
-def acknowledge_all_alerts() -> dict[str, Any]:
+def acknowledge_all_alerts(
+    account: dict[str, Any] = Depends(require_auth),
+) -> dict[str, Any]:
     with DB_LOCK, connect_db() as conn:
         cursor = conn.execute(
             "UPDATE alerts SET status='ACKNOWLEDGED', acknowledged_at=? WHERE status='OPEN'",
@@ -503,7 +808,9 @@ def system_status() -> dict[str, Any]:
 
 
 @app.get("/api/expert/status")
-def expert_system_status() -> dict[str, Any]:
+def expert_system_status(
+    account: dict[str, Any] = Depends(require_auth),
+) -> dict[str, Any]:
     """Return expert-engine availability and the latest persisted analysis summary."""
     try:
         catalog = get_rule_catalog()
